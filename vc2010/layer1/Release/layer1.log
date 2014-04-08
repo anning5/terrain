@@ -1,0 +1,17 @@
+﻿Build started 14/04/08 17:02:08.
+     1>Project "d:\github\terrain\vc2010\layer1\layer1.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "Release\layer1.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         All outputs are up-to-date.
+       Link:
+         All outputs are up-to-date.
+         layer1.vcxproj -> D:\github\terrain\vc2010\layer1\Release\layer1.exe
+       FinalizeBuildStatus:
+         Deleting file "Release\layer1.unsuccessfulbuild".
+         Touching "Release\layer1.lastbuildstate".
+     1>Done Building Project "d:\github\terrain\vc2010\layer1\layer1.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:00.09

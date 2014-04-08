@@ -1,0 +1,34 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Title of the document</title>
+</head>
+
+<body>
+<canvas id="myCanvas" width="200" height="100" >
+</canvas>
+<script>
+var icolor=0;
+var iNum=256;
+var iID=setInterval(setbgColor, 500);
+function setbgColor()
+{
+        document.bgColor="#"+icolor*iNum*iNum+icolor*iNum+icolor;
+	document.write(document.bgColor);
+	document.write("<br>");
+        if((icolor+=10)>iNum)
+        {
+                clearInterval(iID);
+        }
+}
+var c = document.getElementById("myCanvas");
+var ctx = c.getContext("2d");
+ctx.fillStyle = "#FFff00";
+var d = {wp: 0, ps: 45}
+d.wp = 150;
+ctx.fillRect(0,0,d.wp,d.ps);
+</script>
+</body>
+
+</html>
+	

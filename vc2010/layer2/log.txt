@@ -1,0 +1,4 @@
+created mesh Plane-mesh
+add scene_node id=Camera sid=(null)
+add scene_node id=Lamp sid=(null)
+add scene_node id=Plane sid=(null)

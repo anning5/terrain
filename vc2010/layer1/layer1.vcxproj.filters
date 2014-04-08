@@ -208,7 +208,7 @@
     <ClInclude Include="..\..\src\shaders\terrain_shader.h">
       <Filter>octet\shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\examples\layer1\fluid_dynamics\terrain_app.h">
+    <ClInclude Include="..\..\src\examples\layer1\terrain\terrain_app.h">
       <Filter>terrain</Filter>
     </ClInclude>
   </ItemGroup>

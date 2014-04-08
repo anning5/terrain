@@ -24,11 +24,11 @@
     <ClInclude Include="..\..\src\examples\layer1\cube\cube_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\duck\duck_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\examples.h" />
-    <ClInclude Include="..\..\src\examples\layer1\fluid_dynamics\terrain_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\gif\gif_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\invaderers\invaderers_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\physics\physics_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\ping\ping_app.h" />
+    <ClInclude Include="..\..\src\examples\layer1\terrain\terrain_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\texture\texture_app.h" />
     <ClInclude Include="..\..\src\examples\layer1\triangle\triangle_app.h" />
     <ClInclude Include="..\..\src\helpers\font_helper.h" />

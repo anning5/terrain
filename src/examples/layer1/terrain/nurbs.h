@@ -7,6 +7,7 @@ namespace octet {
 		dynarray<float> knots_v;
 		dynarray<float> basis_u;
 		dynarray<float> basis_v;
+		dynarray<vec3> vertices_v;
 		int degree_u;
 		int degree_v;
 	public:
@@ -23,21 +24,19 @@ namespace octet {
 		{
 			get_basis_functions(degree_u, u, knots_u, basis_u);
 			get_basis_functions(degree_v, v, knots_v, basis_v);
-			int u_count = 4, v_count = 4;
+			unsigned int u_count = basis_u.size(), v_count = basis_v.size();
 			int index = 0;
-			dynarray<vec3> vertices_v;
-			vertices_v.resize(v_count);
-			for(int i = 0; i < v_count; i++)
+			for(unsigned int i = 0; i < v_count; i++)
 			{
 				vertices_v[i] = vec3(0, 0, 0);
-				for(int j = 0; j < u_count; j++)
+				for(unsigned int j = 0; j < u_count; j++)
 				{
 					vertices_v[i] += basis_u[j] * ctrl_points[index];
 					index++;
 				}
 			}
 			vertex = vec3(0, 0, 0);
-			for(int k = 0; k < v_count; k++)
+			for(unsigned int k = 0; k < v_count; k++)
 			{
 				vertex += basis_v[k] * vertices_v[k];
 			}
@@ -64,18 +63,21 @@ namespace octet {
 		void add_knot_v(float k)
 		{
 			knots_v.push_back(k);
-			if(knots_v.size() > 4)
+			int delta = knots_v.size() - 4;
+			if(delta > 0)
 			{
-				basis_v.resize(knots_v.size() - 4);
+				basis_v.resize(delta);
+				vertices_v.resize(delta);
 			}
 		}
 
 		void add_knot_u(float k)
 		{
 			knots_u.push_back(k);
-			if(knots_u.size() > 4)
+			int delta = knots_u.size() - 4;
+			if(delta > 0)
 			{
-				basis_u.resize(knots_u.size() - 4);
+				basis_u.resize(delta);
 			}
 		}
 
@@ -93,6 +95,7 @@ namespace octet {
 		{
 			basis_u.reset();
 			basis_v.reset();
+			vertices_v.reset();
 			knots_u.reset();
 			knots_v.reset();
 			ctrl_points.reset();

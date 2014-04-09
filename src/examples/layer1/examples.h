@@ -16,6 +16,7 @@
 //*/
 
 //
+#include "terrain/nurbs.h"
 #include "terrain/terrain_app.h"
 
 

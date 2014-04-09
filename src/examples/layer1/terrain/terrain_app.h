@@ -19,17 +19,7 @@
 namespace octet {
 
 
-inline void fill_vertices(float *vertices, float x, float y, float z, float u, float v)
-{
-	vertices[0] = x;
-	vertices[1] = y;
-	vertices[2] = z;
-	vertices[3] = u;
-	vertices[4] = v;
-}
 
-// Holds the vertices
-// Holds the RGBA buffer
   // this is an app to draw a triangle, it takes some of its workings from the class "app"
   class terrain_app : public app {
     // Matrix to transform points on our triangle to the world space
@@ -42,14 +32,15 @@ inline void fill_vertices(float *vertices, float x, float y, float z, float u, f
     camera_control cc;
     terrain_shader shader_;
     color_shader color_shader;
+		nurbs_surface terrain;
 
     int mouse_x;
     int mouse_y;
     int mouse_wheel;
     GLuint texture;
 
-		float vertices[50000];
-		float ctrl_points[10 * 10 * 3];
+		dynarray<vec3> vertices;
+		dynarray<vec2> uvs;
     bool is_left_button_down;
 		static const int TERRAIN_WIDTH = 3;
 
@@ -74,8 +65,27 @@ inline void fill_vertices(float *vertices, float x, float y, float z, float u, f
     void app_init() 
     {
 			glPointSize(5.f);
-			set_ctrl_points();
-			generate_terrain_mesh();
+			terrain.set_degree_u(3);
+			terrain.set_degree_v(3);
+			terrain.add_knot_u(0);
+			terrain.add_knot_u(0);
+			terrain.add_knot_u(0);
+			terrain.add_knot_u(0);
+			terrain.add_knot_u(1);
+			terrain.add_knot_u(1);
+			terrain.add_knot_u(1);
+			terrain.add_knot_u(1);
+
+			terrain.add_knot_v(0);
+			terrain.add_knot_v(0);
+			terrain.add_knot_v(0);
+			terrain.add_knot_v(0);
+			terrain.add_knot_v(1);
+			terrain.add_knot_v(1);
+			terrain.add_knot_v(1);
+			terrain.add_knot_v(1);
+
+			create_ctrl_points();
 			
       texture = resources::get_texture_handle(GL_RGB, "assets/terrain.gif");
 	    // initialize the shader
@@ -97,91 +107,73 @@ inline void fill_vertices(float *vertices, float x, float y, float z, float u, f
 	    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-		void set_point(int index, float x, float y, float z)
+		void create_ctrl_points()
 		{
-			ctrl_points[index] = x;
-			ctrl_points[index + 1] = y;
-			ctrl_points[index + 2] = z;
-		}
-
-		void set_ctrl_points()
-		{
+			terrain.add_ctrl_points(vec3(0, 0, 0));
+			terrain.add_ctrl_points(vec3(1, 1, 0));
+			terrain.add_ctrl_points(vec3(2, 1, 0));
+			terrain.add_ctrl_points(vec3(3, 0, 0));
 			int index = 0;
-			set_point(index, 0, 0, 0); index += 3;
-			set_point(index, 1, 1, 0); index += 3;
-			set_point(index, 2, 1, 0); index += 3;
-			set_point(index, 3, 0, 0); index += 3;
 
-			set_point(index, 0, 0, 1); index += 3;
-			set_point(index, 1, 1, 1); index += 3;
-			set_point(index, 2, 1, 1); index += 3;
-			set_point(index, 3, 0, 1); index += 3;
+			static float offset = .5f;
+			offset = 0;
+			terrain.add_ctrl_points(vec3(0, 0 + offset, 1));
+			terrain.add_ctrl_points(vec3(1, 1 + offset, 1));
+			terrain.add_ctrl_points(vec3(2, 1 + offset, 1));
+			terrain.add_ctrl_points(vec3(3, 0 + offset, 1));
 
-			set_point(index, 0, 0, 2); index += 3;
-			set_point(index, 1, 1, 2); index += 3;
-			set_point(index, 2, 1, 2); index += 3;
-			set_point(index, 3, 0, 2); index += 3;
+			static float offset1 = .5f;
+			offset1 = 0;
+			terrain.add_ctrl_points(vec3(0, 0 + offset1, 2));
+			terrain.add_ctrl_points(vec3(1, 1 + offset1, 2));
+			terrain.add_ctrl_points(vec3(2, 1 + offset1, 2));
+			terrain.add_ctrl_points(vec3(3, 0 + offset1, 2));
 
-			set_point(index, 0, 0, 3); index += 3;
-			set_point(index, 1, 1, 3); index += 3;
-			set_point(index, 2, 1, 3); index += 3;
-			set_point(index, 3, 0, 3); index += 3;
+			static float offset2 = 1.f;
+			offset2 = 0;
+			terrain.add_ctrl_points(vec3(0, 0 + offset2, 3));
+			terrain.add_ctrl_points(vec3(1, 1 + offset2, 3));
+			terrain.add_ctrl_points(vec3(2, 1 + offset2, 3));
+			terrain.add_ctrl_points(vec3(3, 0 + offset2, 3));
 		}
 
-		void draw_ctrl_points(int count)
+		void draw_ctrl_points()
 		{
       color_shader.render(modelToProjection, vec4(1, 0, 0, 1));
-      glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)ctrl_points);
-      glDrawArrays(GL_POINTS, 0, count);
+      glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &terrain.get_ctrl_points()[0]);
+      glDrawArrays(GL_POINTS, 0, terrain.get_ctrl_points().size());
 		}
 
-		void get_surface_vertex_by_uv(float *vertex, float u, float v)
+		void generate_terrain_mesh(int resolution)
 		{
-			int degree = 3;
-			int ctrl_point_count = 4;
-			float knots[] = {0, 0, 0 ,0, 1, 1, 1, 1};
-			//float knots[] = {0, 0, 0 ,0, .1f, .3f, .6f, 1};
-			vec3 v1(0, 0, 0), v2(1, 1, 0), v3(2, 1, 0), v4(3, 0, 0);
-			float basis_u[4], basis_v[4];
-			get_basis_functions(degree, u, ctrl_point_count, knots, basis_u);
-			get_basis_functions(degree, v, ctrl_point_count, knots, basis_v);
-			get_surface_vertex(vertex, ctrl_points, basis_u, 4, basis_v, 4);
-		}
-
-		void generate_terrain_mesh()
-		{
+			vertices.resize(resolution * resolution * 4);
+			uvs.resize(resolution * resolution * 4);
 			int index = 0;
-			const int COUNT = 10;
-			float du = 1.f / COUNT, dv = 1.f / COUNT, u = 0, v = 0;
-			for(int i = 0; i < COUNT; i++)
+			float du = 1.f / resolution, dv = 1.f / resolution, u = 0, v = 0;
+			for(int i = 0; i < resolution; i++)
 			{
 				u = 0;
-				for(int j = 0; j < COUNT; j++)
+				for(int j = 0; j < resolution; j++)
 				{
-					if(u > .9f)
-					{
-						u = .9f;
-					}
-					if(v > .9f)
-					{
-						v = .9f;
-					}
-					get_surface_vertex_by_uv(vertices + index, u, v);
-					vertices[index + 3] = vertices[index];
-					vertices[index + 4] = vertices[index + 2];
-					index += 5;
-					get_surface_vertex_by_uv(vertices + index, u, v + dv);
-					vertices[index + 3] = vertices[index];
-					vertices[index + 4] = vertices[index + 2];
-					index += 5;
-					get_surface_vertex_by_uv(vertices + index, u + du, v + dv);
-					vertices[index + 3] = vertices[index];
-					vertices[index + 4] = vertices[index + 2];
-					index += 5;
-					get_surface_vertex_by_uv(vertices + index, u + du, v);
-					vertices[index + 3] = vertices[index];
-					vertices[index + 4] = vertices[index + 2];
-					index += 5;
+					terrain.get_surface_vertex(vertices[index], u, v);
+					uvs[index][0] = vertices[index][0];
+					uvs[index][1] = vertices[index][2];
+					index++;
+
+					terrain.get_surface_vertex(vertices[index], u, v + dv);
+					uvs[index][0] = vertices[index][0];
+					uvs[index][1] = vertices[index][2];
+					index++;
+
+					terrain.get_surface_vertex(vertices[index], u + du, v + dv);
+					uvs[index][0] = vertices[index][0];
+					uvs[index][1] = vertices[index][2];
+					index++;
+
+					terrain.get_surface_vertex(vertices[index], u + du, v);
+					uvs[index][0] = vertices[index][0];
+					uvs[index][1] = vertices[index][2];
+					index++;
 					u += du;
 				}
 				v += dv;
@@ -266,24 +258,20 @@ inline void fill_vertices(float *vertices, float x, float y, float z, float u, f
 
       // set up opengl to draw flat shaded triangles of a fixed color
       shader_.render(modelToProjection, 0);
-      int index = 0;
+
+			static const int COUNT = 10;
+			generate_terrain_mesh(COUNT);
 
       glActiveTexture(GL_TEXTURE0);
       glBindTexture(GL_TEXTURE_2D, texture);
-      glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)vertices);
-      glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(vertices + 3));
+      glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &vertices[0][0]);
+      glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), &uvs[0][0]);
       glEnableVertexAttribArray(attribute_pos);
       glEnableVertexAttribArray(attribute_uv);
-			/*
-      fill_vertices(vertices + index, TERRAIN_WIDTH, 0, 0, 1, 0); index += 5;
-      fill_vertices(vertices + index, 0, 0, 0, 0, 0); index += 5;
-      fill_vertices(vertices + index, 0, 0, TERRAIN_WIDTH, 0, 1); index += 5;
-      fill_vertices(vertices + index, TERRAIN_WIDTH, 0, TERRAIN_WIDTH, 1, 1); index += 5;
-      glDrawArrays(GL_QUADS, 0, 4);
-			//*/
-      glDrawArrays(GL_QUADS, 0, 4 * 10 * 10);
+
+      glDrawArrays(GL_QUADS, 0, 4 * COUNT * COUNT);
     
-			draw_ctrl_points(16);
+			draw_ctrl_points();
 		}
 	};
 }

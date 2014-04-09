@@ -1,104 +1,182 @@
 namespace octet {
-/*  Subroutine to generate B-spline basis functions for open knot vectors
 
-	C code for An Introduction to NURBS
-	by David F. Rogers. Copyright (C) 2000 David F. Rogers,
-	All rights reserved.
-	
-	Name: basis.c
-	Language: C
-	Subroutines called: none
-	Book reference: p. 279
-
-    c        = order of the B-spline basis function
-    d        = first term of the basis function recursion relation
-    e        = second term of the basis function recursion relation
-    npts     = number of defining polygon vertices
-    n[]      = array containing the basis functions
-               n[1] contains the basis function associated with B1 etc.
-    nplusc   = constant -- npts + c -- maximum number of knot values
-    t        = parameter value
-    temp[]   = temporary array
-		x[]      = knot vector
-		*/	
-
-	void get_basis_functions(int c, float t, int npts,float *x, float *n)
+	class nurbs_surface
 	{
-		int nplusc;
-		float d,e;
-		float temp[36];
+		dynarray<vec3> ctrl_points;
+		dynarray<float> knots_u;
+		dynarray<float> knots_v;
+		dynarray<float> basis_u;
+		dynarray<float> basis_v;
+		int degree_u;
+		int degree_v;
+	public:
 
-		nplusc = npts + c + 1;
-
-		/*		printf("knot vector is \n");
-					for (i = 1; i <= nplusc; i++){
-					printf(" %d %d \n", i,x[i]);
-					}
-					printf("t is %f \n", t);
-					*/
-
-		/* calculate the first order basis functions n[i][1]	*/
-
-		for (int i = 0; i < nplusc-1; i++){
-			if (( t >= x[i]) && (t < x[i+1]))
-				temp[i] = 1;
-			else
-				temp[i] = 0;
-		}
-
-		/* calculate the higher order basis functions */
-
-		for (int k = 1; k <= c; k++){
-			for (int i = 0; i < nplusc-k; i++){
-				if (temp[i] != 0)    /* if the lower order basis function is zero skip the calculation */
-					d = ((t-x[i])*temp[i])/(x[i+k]-x[i]);
-				else
-					d = 0;
-
-				if (temp[i+1] != 0)     /* if the lower order basis function is zero skip the calculation */
-					e = ((x[i+k+1]-t)*temp[i+1])/(x[i+k+1]-x[i+1]);
-				else
-					e = 0;
-
-				temp[i] = d + e;
-			}
-		}
-
-		if (t == x[nplusc - 1]){		//    pick up last point
-			temp[npts - 1] = 1;
-		}
-
-		/* put in n array	*/
-
-		for(int i = 0; i < npts; i++) {
-			n[i] = temp[i];
-		}
-	}
-
-	void get_surface_vertex(float *vertex, float *ctrl_points, float *basis_u, float u_count, float *basis_v, float v_count)
-	{
-		int index = 0, index1 = 0;
-		float vertices_v[1000] = {0};
-		for(int i = 0; i < v_count; i++)
+		nurbs_surface() :
+			degree_u(0),
+			degree_v(0)
 		{
-			for(int j = 0; j < u_count; j++)
+			//float knots[] = {0, 0, 0 ,0, 1, 1, 1, 1};
+			//float knots[] = {0, 0, 0 ,0, .1f, .3f, .6f, 1};
+		}
+
+		void get_surface_vertex(vec3 &vertex, float u, float v)
+		{
+			get_basis_functions(degree_u, u, knots_u, basis_u);
+			get_basis_functions(degree_v, v, knots_v, basis_v);
+			int u_count = 4, v_count = 4;
+			int index = 0;
+			dynarray<vec3> vertices_v;
+			vertices_v.resize(v_count);
+			for(int i = 0; i < v_count; i++)
 			{
-				vertices_v[index1] += basis_u[j] * ctrl_points[index];
-				vertices_v[index1 + 1] += basis_u[j] * ctrl_points[index + 1];
-				vertices_v[index1 + 2] += basis_u[j] * ctrl_points[index + 2];
-				index += 3; 
+				vertices_v[i] = vec3(0, 0, 0);
+				for(int j = 0; j < u_count; j++)
+				{
+					vertices_v[i] += basis_u[j] * ctrl_points[index];
+					index++;
+				}
 			}
-			index1 += 3;
+			vertex = vec3(0, 0, 0);
+			for(int k = 0; k < v_count; k++)
+			{
+				vertex += basis_v[k] * vertices_v[k];
+			}
 		}
-		index = 0;
-		vertex[0] = vertex[1] = vertex[2] = 0;
-		for(int k = 0; k < v_count; k++)
+
+		void set_knot_u(unsigned int index, float k)
 		{
-			vertex[0] += basis_v[k] * vertices_v[index];
-			vertex[1] += basis_v[k] * vertices_v[index + 1];
-			vertex[2] += basis_v[k] * vertices_v[index + 2];
-			index += 3; 
+			if(index >= knots_u.size())
+			{
+				return;
+			}
+			knots_u[index] = k;
 		}
-	}
+
+		void set_knot_v(unsigned int index, float k)
+		{
+			if(index >= knots_v.size())
+			{
+				return;
+			}
+			knots_v[index] = k;
+		}
+
+		void add_knot_v(float k)
+		{
+			knots_v.push_back(k);
+			if(knots_v.size() > 4)
+			{
+				basis_v.resize(knots_v.size() - 4);
+			}
+		}
+
+		void add_knot_u(float k)
+		{
+			knots_u.push_back(k);
+			if(knots_u.size() > 4)
+			{
+				basis_u.resize(knots_u.size() - 4);
+			}
+		}
+
+		void set_degree_v(int d)
+		{
+			degree_v = d;
+		}
+		
+		void set_degree_u(int d)
+		{
+			degree_u = d;
+		}
+		
+		void reset()
+		{
+			basis_u.reset();
+			basis_v.reset();
+			knots_u.reset();
+			knots_v.reset();
+			ctrl_points.reset();
+		}
+
+		const dynarray<vec3> &get_ctrl_points()
+		{
+			return ctrl_points;
+		}
+
+		void add_ctrl_points(const vec3 &v)
+		{
+			ctrl_points.push_back(v);
+		}
+
+		void set_ctrl_points(unsigned int index, const vec3 &v)
+		{
+			if(index >= ctrl_points.size())
+			{
+				return;
+			}
+			ctrl_points[index] = v;
+		}
+
+		vec3 *get_ctrl_points(unsigned int index)
+		{
+			if(index >= ctrl_points.size())
+			{
+				return NULL;
+			}
+			return &ctrl_points[index];
+		}
+
+		void get_basis_functions(int degree, float t, const dynarray<float> &knots, dynarray<float> &basis)
+		{
+			/*
+			*/	
+			unsigned int knot_count;
+			unsigned int ctrl_point_count = basis.size();
+			float d,e;
+			float temp[36];
+
+			knot_count = knots.size();
+
+			for (unsigned int i = 0; i < knot_count - 1; i++){
+				if (( t >= knots[i]) && (t < knots[i + 1]))
+					temp[i] = 1;
+				else
+					temp[i] = 0;
+			}
+
+			/* calculate the higher order basis functions */
+
+			for (int k = 1; k <= degree; k++){
+				for (unsigned int i = 0; i < knot_count - k; i++){
+					if (temp[i] != 0)    /* if the lower order basis function is zero skip the calculation */
+						d = ((t-knots[i])*temp[i])/(knots[i + k]-knots[i]);
+					else
+						d = 0;
+
+					if (temp[i + 1] != 0)     /* if the lower order basis function is zero skip the calculation */
+						e = ((knots[i + k+1]-t)*temp[i + 1])/(knots[i + k + 1]-knots[i + 1]);
+					else
+						e = 0;
+
+					temp[i] = d + e;
+				}
+			}
+
+			if (t == knots[knot_count - 1] || t > knots[knot_count - 1] && (t - knots[knot_count - 1]) < .00001 ){		//    pick up last point
+				temp[ctrl_point_count - 1] = 1;
+			}
+
+			/* put in n array	*/
+
+			for(unsigned int i = 0; i < ctrl_point_count; i++) {
+				basis[i] = temp[i];
+			}
+		}
+
+
+		~nurbs_surface()
+		{
+		}
+	};
 
 }

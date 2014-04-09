@@ -8,6 +8,7 @@ namespace octet {
 		dynarray<float> basis_u;
 		dynarray<float> basis_v;
 		dynarray<vec3> vertices_v;
+		dynarray<float> temp_basis;
 		int degree_u;
 		int degree_v;
 	public:
@@ -63,6 +64,8 @@ namespace octet {
 		void add_knot_v(float k)
 		{
 			knots_v.push_back(k);
+			if(knots_v.size() > 1 && knots_v.size() > temp_basis.size())
+				temp_basis.resize(knots_v.size() - 1);
 			int delta = knots_v.size() - 4;
 			if(delta > 0)
 			{
@@ -74,6 +77,8 @@ namespace octet {
 		void add_knot_u(float k)
 		{
 			knots_u.push_back(k);
+			if(knots_u.size() > 1 && knots_u.size() > temp_basis.size())
+				temp_basis.resize(knots_u.size() - 1);
 			int delta = knots_u.size() - 4;
 			if(delta > 0)
 			{
@@ -93,6 +98,7 @@ namespace octet {
 		
 		void reset()
 		{
+			temp_basis.reset();
 			basis_u.reset();
 			basis_v.reset();
 			vertices_v.reset();
@@ -136,43 +142,42 @@ namespace octet {
 			unsigned int knot_count;
 			unsigned int ctrl_point_count = basis.size();
 			float d,e;
-			float temp[36];
 
 			knot_count = knots.size();
 
 			for (unsigned int i = 0; i < knot_count - 1; i++){
 				if (( t >= knots[i]) && (t < knots[i + 1]))
-					temp[i] = 1;
+					temp_basis[i] = 1;
 				else
-					temp[i] = 0;
+					temp_basis[i] = 0;
 			}
 
 			/* calculate the higher order basis functions */
 
 			for (int k = 1; k <= degree; k++){
 				for (unsigned int i = 0; i < knot_count - k; i++){
-					if (temp[i] != 0)    /* if the lower order basis function is zero skip the calculation */
-						d = ((t-knots[i])*temp[i])/(knots[i + k]-knots[i]);
+					if (temp_basis[i] != 0)    /* if the lower order basis function is zero skip the calculation */
+						d = ((t-knots[i])*temp_basis[i])/(knots[i + k]-knots[i]);
 					else
 						d = 0;
 
-					if (temp[i + 1] != 0)     /* if the lower order basis function is zero skip the calculation */
-						e = ((knots[i + k+1]-t)*temp[i + 1])/(knots[i + k + 1]-knots[i + 1]);
+					if (temp_basis[i + 1] != 0)     /* if the lower order basis function is zero skip the calculation */
+						e = ((knots[i + k+1]-t)*temp_basis[i + 1])/(knots[i + k + 1]-knots[i + 1]);
 					else
 						e = 0;
 
-					temp[i] = d + e;
+					temp_basis[i] = d + e;
 				}
 			}
 
 			if (t == knots[knot_count - 1] || t > knots[knot_count - 1] && (t - knots[knot_count - 1]) < .00001 ){		//    pick up last point
-				temp[ctrl_point_count - 1] = 1;
+				temp_basis[ctrl_point_count - 1] = 1;
 			}
 
 			/* put in n array	*/
 
 			for(unsigned int i = 0; i < ctrl_point_count; i++) {
-				basis[i] = temp[i];
+				basis[i] = temp_basis[i];
 			}
 		}
 

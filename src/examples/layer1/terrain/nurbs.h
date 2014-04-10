@@ -7,6 +7,8 @@ namespace octet {
 		dynarray<float> knots_v;
 		dynarray<float> basis_u;
 		dynarray<float> basis_v;
+		dynarray<float> weights_u;
+		dynarray<float> weights_v;
 		dynarray<vec3> vertices_v;
 		dynarray<float> temp_basis;
 		int degree_u;
@@ -17,8 +19,6 @@ namespace octet {
 			degree_u(0),
 			degree_v(0)
 		{
-			//float knots[] = {0, 0, 0 ,0, 1, 1, 1, 1};
-			//float knots[] = {0, 0, 0 ,0, .1f, .3f, .6f, 1};
 		}
 
 		void get_surface_vertex(vec3 &vertex, float u, float v)
@@ -27,19 +27,32 @@ namespace octet {
 			get_basis_functions(degree_v, v, knots_v, basis_v);
 			unsigned int u_count = basis_u.size(), v_count = basis_v.size();
 			int index = 0;
+			float factor = 0;
+			for(unsigned int i = 0; i < u_count; i++)
+			{
+				factor += basis_u[i] * weights_u[i];
+			}
+			factor = 1 / factor;
 			for(unsigned int i = 0; i < v_count; i++)
 			{
 				vertices_v[i] = vec3(0, 0, 0);
 				for(unsigned int j = 0; j < u_count; j++)
 				{
-					vertices_v[i] += basis_u[j] * ctrl_points[index];
+					vertices_v[i] += basis_u[j] * weights_u[j] * factor * ctrl_points[index];
 					index++;
 				}
 			}
+
+			factor = 0;
+			for(unsigned int i = 0; i < u_count; i++)
+			{
+				factor += basis_v[i] * weights_v[i];
+			}
+			factor = 1 / factor;
 			vertex = vec3(0, 0, 0);
 			for(unsigned int k = 0; k < v_count; k++)
 			{
-				vertex += basis_v[k] * vertices_v[k];
+				vertex += basis_v[k] * weights_v[k] * factor *vertices_v[k];
 			}
 		}
 
@@ -61,10 +74,56 @@ namespace octet {
 			knots_v[index] = k;
 		}
 
+		void add_weight_u(unsigned int index, float w)
+		{
+			if(index > weights_u.size())
+			{
+				return;
+			}
+			weights_u[index] += w;
+		}
+
+		void add_weight_v(unsigned int index, float w)
+		{
+			if(index > weights_v.size())
+			{
+				return;
+			}
+			weights_v[index] += w;
+		}
+
+		void set_weight_u(unsigned int index, float w)
+		{
+			if(index > weights_u.size())
+			{
+				return;
+			}
+			weights_u[index] = w;
+		}
+
+		void set_weight_v(unsigned int index, float w)
+		{
+			if(index > weights_v.size())
+			{
+				return;
+			}
+			weights_v[index] = w;
+		}
+
+		void add_weight_u(float w)
+		{
+			weights_u.push_back(w);
+		}
+
+		void add_weight_v(float w)
+		{
+			weights_v.push_back(w);
+		}
+
 		void add_knot_v(float k)
 		{
 			knots_v.push_back(k);
-			if(knots_v.size() > 1 && knots_v.size() > temp_basis.size())
+			if(knots_v.size() > 1 && knots_v.size() > temp_basis.size() + 1)
 				temp_basis.resize(knots_v.size() - 1);
 			int delta = knots_v.size() - 4;
 			if(delta > 0)
@@ -77,7 +136,7 @@ namespace octet {
 		void add_knot_u(float k)
 		{
 			knots_u.push_back(k);
-			if(knots_u.size() > 1 && knots_u.size() > temp_basis.size())
+			if(knots_u.size() > 1 && knots_u.size() > temp_basis.size() + 1)
 				temp_basis.resize(knots_u.size() - 1);
 			int delta = knots_u.size() - 4;
 			if(delta > 0)
@@ -101,6 +160,8 @@ namespace octet {
 			temp_basis.reset();
 			basis_u.reset();
 			basis_v.reset();
+			weights_u.reset();
+			weights_v.reset();
 			vertices_v.reset();
 			knots_u.reset();
 			knots_v.reset();

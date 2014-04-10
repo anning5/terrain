@@ -75,6 +75,14 @@ namespace octet {
 			terrain.add_knot_u(1);
 			terrain.add_knot_u(1);
 			terrain.add_knot_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
 
 			terrain.add_knot_v(0);
 			terrain.add_knot_v(0);
@@ -84,6 +92,15 @@ namespace octet {
 			terrain.add_knot_v(1);
 			terrain.add_knot_v(1);
 			terrain.add_knot_v(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+
 
 			create_ctrl_points();
 			
@@ -116,21 +133,21 @@ namespace octet {
 			int index = 0;
 
 			static float offset = .5f;
-			offset = 0;
+			//offset = 0;
 			terrain.add_ctrl_points(vec3(0, 0 + offset, 1));
 			terrain.add_ctrl_points(vec3(1, 1 + offset, 1));
 			terrain.add_ctrl_points(vec3(2, 1 + offset, 1));
 			terrain.add_ctrl_points(vec3(3, 0 + offset, 1));
 
 			static float offset1 = .5f;
-			offset1 = 0;
+			//offset1 = 0;
 			terrain.add_ctrl_points(vec3(0, 0 + offset1, 2));
 			terrain.add_ctrl_points(vec3(1, 1 + offset1, 2));
 			terrain.add_ctrl_points(vec3(2, 1 + offset1, 2));
 			terrain.add_ctrl_points(vec3(3, 0 + offset1, 2));
 
 			static float offset2 = 1.f;
-			offset2 = 0;
+			//offset2 = 0;
 			terrain.add_ctrl_points(vec3(0, 0 + offset2, 3));
 			terrain.add_ctrl_points(vec3(1, 1 + offset2, 3));
 			terrain.add_ctrl_points(vec3(2, 1 + offset2, 3));
@@ -182,95 +199,96 @@ namespace octet {
 
     // this is called to draw the world
     void draw_world(int x1, int y1, int w1, int h1) {
-	static DWORD lastFrameCount = 0;
-	static DWORD curFrameCount = 0;
-	static DWORD aa = GetTickCount();
-	curFrameCount++;
-	int count = GetTickCount() - aa;
-	if(count >= 1000)
-	{
-		//printf("%d\n", (int)((curFrameCount - lastFrameCount) * 1000.f / count));
-		char buf[256];
-		sprintf(buf, "%d", (int)((curFrameCount - lastFrameCount) * 1000.f / count));
-		SetWindowTextA(get_hwnd(), buf);
-		lastFrameCount = curFrameCount;
-		aa += count;
-	}
-		/*
-		static int ii = 0;
-		printf("%d\n", ii++);
-		//*/
-      // set a viewport - includes whole window area
-      glViewport(x1, y1, w1, h1);
+			static DWORD lastFrameCount = 0;
+			static DWORD curFrameCount = 0;
+			static DWORD aa = GetTickCount();
+			curFrameCount++;
+			int count = GetTickCount() - aa;
+			if(count >= 1000)
+			{
+				//printf("%d\n", (int)((curFrameCount - lastFrameCount) * 1000.f / count));
+				char buf[256];
+				sprintf(buf, "%d", (int)((curFrameCount - lastFrameCount) * 1000.f / count));
+				SetWindowTextA(get_hwnd(), buf);
+				lastFrameCount = curFrameCount;
+				aa += count;
+			}
+			terrain.add_weight_v(1, .001f);
+			/*
+				 static int ii = 0;
+				 printf("%d\n", ii++);
+			//*/
+			// set a viewport - includes whole window area
+			glViewport(x1, y1, w1, h1);
 
-      // clear the background to black
-      glClearColor(0, 0, 0, 1);
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      if(is_key_down(key_lmb) && !is_left_button_down)
-      {
-	      is_left_button_down = true;
-	      get_mouse_pos(mouse_x, mouse_y);
-	      SetCapture(get_hwnd());
-      }
-      else if(is_left_button_down && !is_key_down(key_lmb))
-      {
-	      is_left_button_down = false;
-	      ReleaseCapture();
-      }
-      int mouse_wheel_delta = get_mouse_wheel() - mouse_wheel;
-      if(mouse_wheel_delta != 0)
-      {
-	      static float factor1 = .1f;
-	      cc.add_view_distance(mouse_wheel_delta / WHEEL_DELTA * factor1);
-	      mouse_wheel = get_mouse_wheel();
-      }
+			// clear the background to black
+			glClearColor(0, 0, 0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			if(is_key_down(key_lmb) && !is_left_button_down)
+			{
+				is_left_button_down = true;
+				get_mouse_pos(mouse_x, mouse_y);
+				SetCapture(get_hwnd());
+			}
+			else if(is_left_button_down && !is_key_down(key_lmb))
+			{
+				is_left_button_down = false;
+				ReleaseCapture();
+			}
+			int mouse_wheel_delta = get_mouse_wheel() - mouse_wheel;
+			if(mouse_wheel_delta != 0)
+			{
+				static float factor1 = .1f;
+				cc.add_view_distance(mouse_wheel_delta / WHEEL_DELTA * factor1);
+				mouse_wheel = get_mouse_wheel();
+			}
 			static float factor2 = .005f;
 			if(is_key_down('S'))
 			{
-	      cc.add_view_distance(factor2);
+				cc.add_view_distance(factor2);
 			}
 			if(is_key_down('W'))
 			{
-	      cc.add_view_distance(-factor2);
+				cc.add_view_distance(-factor2);
 			}
-      if(is_left_button_down)
-      {
-	      static float factor = .2f;
-	      is_left_button_down = true;
-	      int x, y;
-	      get_mouse_pos(x, y);
-	      short sx = x, sy = y;
-	      int delta_x = mouse_x - sx, delta_y = mouse_y - sy;
-	      if(delta_x != 0)
-		      cc.rotate_h((float)delta_x * factor);
-	      if(delta_y != 0)
-		      cc.rotate_v((float)delta_y * factor);
-	      mouse_x = sx;
-	      mouse_y = sy;
-      }
+			if(is_left_button_down)
+			{
+				static float factor = .2f;
+				is_left_button_down = true;
+				int x, y;
+				get_mouse_pos(x, y);
+				short sx = x, sy = y;
+				int delta_x = mouse_x - sx, delta_y = mouse_y - sy;
+				if(delta_x != 0)
+					cc.rotate_h((float)delta_x * factor);
+				if(delta_y != 0)
+					cc.rotate_v((float)delta_y * factor);
+				mouse_x = sx;
+				mouse_y = sy;
+			}
 
-      // build a projection matrix: model -> world -> camera -> projection
-      // the projection space is the cube -1 <= x/w, y/w, z/w <= 1
-      modelToProjection = mat4t::build_projection_matrix(modelToWorld, cc.get_matrix());
+			// build a projection matrix: model -> world -> camera -> projection
+			// the projection space is the cube -1 <= x/w, y/w, z/w <= 1
+			modelToProjection = mat4t::build_projection_matrix(modelToWorld, cc.get_matrix());
 
-      // spin the triangle by rotating about Z (the view direction)
-      //modelToWorld.rotateZ(.01);
+			// spin the triangle by rotating about Z (the view direction)
+			//modelToWorld.rotateZ(.01);
 
-      // set up opengl to draw flat shaded triangles of a fixed color
-      shader_.render(modelToProjection, 0);
+			// set up opengl to draw flat shaded triangles of a fixed color
+			shader_.render(modelToProjection, 0);
 
 			static const int COUNT = 10;
 			generate_terrain_mesh(COUNT);
 
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, texture);
-      glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &vertices[0][0]);
-      glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), &uvs[0][0]);
-      glEnableVertexAttribArray(attribute_pos);
-      glEnableVertexAttribArray(attribute_uv);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &vertices[0][0]);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), &uvs[0][0]);
+			glEnableVertexAttribArray(attribute_pos);
+			glEnableVertexAttribArray(attribute_uv);
 
-      glDrawArrays(GL_QUADS, 0, 4 * COUNT * COUNT);
-    
+			glDrawArrays(GL_QUADS, 0, 4 * COUNT * COUNT);
+
 			draw_ctrl_points();
 		}
 	};

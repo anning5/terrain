@@ -39,7 +39,7 @@ namespace octet {
     int mouse_y;
     int mouse_wheel;
 		int key_cool_down;
-		int current_selected_ctrl_point;
+		unsigned int current_selected_ctrl_point;
     GLuint texture;
 
 		dynarray<vec3> ctrl_point_colors;
@@ -140,9 +140,9 @@ namespace octet {
 		void create_ctrl_points()
 		{
 			terrain.add_ctrl_points(vec3(0, 0, 0));
-			terrain.add_ctrl_points(vec3(1, 1, 0));
-			terrain.add_ctrl_points(vec3(2, 1, 0));
-			terrain.add_ctrl_points(vec3(3, 0, 0));
+			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 1, 0));
+			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 1, 0));
+			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -152,9 +152,9 @@ namespace octet {
 			static float offset = .5f;
 			//offset = 0;
 			terrain.add_ctrl_points(vec3(0, 0 + offset, 1));
-			terrain.add_ctrl_points(vec3(1, 1 + offset, 1));
-			terrain.add_ctrl_points(vec3(2, 1 + offset, 1));
-			terrain.add_ctrl_points(vec3(3, 0 + offset, 1));
+			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 1 + offset, 1));
+			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 1 + offset, 1));
+			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0 + offset, 1));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -163,9 +163,9 @@ namespace octet {
 			static float offset1 = .5f;
 			//offset1 = 0;
 			terrain.add_ctrl_points(vec3(0, 0 + offset1, 2));
-			terrain.add_ctrl_points(vec3(1, 1 + offset1, 2));
-			terrain.add_ctrl_points(vec3(2, 1 + offset1, 2));
-			terrain.add_ctrl_points(vec3(3, 0 + offset1, 2));
+			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 1 + offset1, 2));
+			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 1 + offset1, 2));
+			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0 + offset1, 2));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -174,13 +174,18 @@ namespace octet {
 			static float offset2 = 1.f;
 			//offset2 = 0;
 			terrain.add_ctrl_points(vec3(0, 0 + offset2, 3));
-			terrain.add_ctrl_points(vec3(1, 1 + offset2, 3));
-			terrain.add_ctrl_points(vec3(2, 1 + offset2, 3));
-			terrain.add_ctrl_points(vec3(3, 0 + offset2, 3));
+			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 1 + offset2, 3));
+			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 1 + offset2, 3));
+			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0 + offset2, 3));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
+		}
+
+		vec3 view_to_world(const vec3 &v)
+		{
+			return v * cc.get_matrix();
 		}
 
 		void select_ctrl_point()
@@ -188,12 +193,10 @@ namespace octet {
 			int x, y, w, h;
 			get_mouse_pos(x, y);
 			get_viewport_size(w, h);
-			vec3 target(x - w * .5f, h - y - h * .5f, -w / 2.f);
+			vec3 target(x - w * .5f, h * .5f - y, -w * .5f);
 			vec3 camera((vec3&)(cc.get_matrix()[3]));
-			target = target * cc.get_matrix();
-			vec3 ray((target - camera).normalize());
+			vec3 ray((view_to_world(target) - camera).normalize());
 
-			float k = -camera[2] / ray[2];
 			static float radius = .05f;
 
 			const dynarray<vec3> &points = terrain.get_ctrl_points();
@@ -286,28 +289,80 @@ namespace octet {
 			glClearColor(0, 0, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-			if(is_key_down(key_lmb))
+			//left mouse button
+			if(is_key_down(key_lmb) && !is_left_button_down)
 			{
 				is_left_button_down = true;
+				select_ctrl_point();
+				get_mouse_pos(mouse_x, mouse_y);
+				SetCapture(get_hwnd());
 			}
-			else if(is_left_button_down)
+			else if(is_left_button_down && !is_key_down(key_lmb))
 			{
 				is_left_button_down = false;
-				select_ctrl_point();
+				ReleaseCapture();
+			}
+			if(is_left_button_down)
+			{
+				static float factor = .002f;
+				int x, y;
+				get_mouse_pos(x, y);
+				short sx = x, sy = y;
+				int delta_x = sx - mouse_x, delta_y = mouse_y - sy;
+
+				if(mouse_x != sx || mouse_y != sy)
+				{
+					const dynarray<vec3> &ctrl_points = terrain.get_ctrl_points();
+					if(current_selected_ctrl_point < ctrl_points.size())
+					{
+						int w, h;
+						get_viewport_size(w, h);
+						float half_w = w * .5f;
+						float half_h = h * .5f;
+						vec3 ray(sx - half_w, half_h - sy, -half_w);
+						mat4t worldToCamera;
+						cc.get_matrix().invertQuick(worldToCamera);
+						const vec3 &ctrl_point = ctrl_points[current_selected_ctrl_point];
+						vec3 v =  ctrl_point * worldToCamera;
+						float k = v[2] / ray[2];
+						v[0] = ray[0] * k;
+						v[1] = ray[1] * k;
+						v[2] = ray[2] * k;
+						terrain.set_ctrl_points(current_selected_ctrl_point, view_to_world(v));
+					}
+
+					mouse_x = sx;
+					mouse_y = sy;
+				}
 			}
 
+			//right mouse button
 			if(is_key_down(key_rmb) && !is_right_button_down)
 			{
 				is_right_button_down = true;
 				get_mouse_pos(mouse_x, mouse_y);
 				SetCapture(get_hwnd());
-
 			}
 			else if(is_right_button_down && !is_key_down(key_rmb))
 			{
 				is_right_button_down = false;
 				ReleaseCapture();
 			}
+			if(is_right_button_down)
+			{
+				static float factor = .2f;
+				int x, y;
+				get_mouse_pos(x, y);
+				short sx = x, sy = y;
+				int delta_x = mouse_x - x, delta_y = mouse_y - y;
+				if(delta_x != 0)
+					cc.rotate_h((float)delta_x * factor);
+				if(delta_y != 0)
+					cc.rotate_v((float)delta_y * factor);
+				mouse_x = sx;
+				mouse_y = sy;
+			}
+
 			int mouse_wheel_delta = get_mouse_wheel() - mouse_wheel;
 			if(mouse_wheel_delta != 0)
 			{
@@ -323,21 +378,6 @@ namespace octet {
 			if(is_key_down('W'))
 			{
 				cc.add_view_distance(-factor2);
-			}
-			if(is_right_button_down)
-			{
-				static float factor = .2f;
-				is_right_button_down = true;
-				int x, y;
-				get_mouse_pos(x, y);
-				short sx = x, sy = y;
-				int delta_x = mouse_x - sx, delta_y = mouse_y - sy;
-				if(delta_x != 0)
-					cc.rotate_h((float)delta_x * factor);
-				if(delta_y != 0)
-					cc.rotate_v((float)delta_y * factor);
-				mouse_x = sx;
-				mouse_y = sy;
 			}
 
 			if(is_key_down('P'))

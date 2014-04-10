@@ -187,15 +187,6 @@ namespace octet {
 			ctrl_points[index] = v;
 		}
 
-		vec3 *get_ctrl_points(unsigned int index)
-		{
-			if(index >= ctrl_points.size())
-			{
-				return NULL;
-			}
-			return &ctrl_points[index];
-		}
-
 		void get_basis_functions(int degree, float t, const dynarray<float> &knots, dynarray<float> &basis)
 		{
 			/*

@@ -135,6 +135,7 @@ static char *get_sprintf_buffer() {
 // shaders
 #include "../shaders/shader.h"
 #include "../shaders/color_shader.h"
+#include "../shaders/vertex_color_shader.h"
 #include "../shaders/texture_shader.h"
 #include "../shaders/texture_normal_shader.h"
 #include "../shaders/phong_shader.h"

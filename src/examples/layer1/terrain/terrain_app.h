@@ -31,18 +31,23 @@ namespace octet {
     // This lets us move our camera
     camera_control cc;
     terrain_shader shader_;
-    color_shader color_shader;
+    vertex_color_shader vertex_color_shader_;
 		nurbs_surface terrain;
 		sky_box sb;
 
     int mouse_x;
     int mouse_y;
     int mouse_wheel;
+		int key_cool_down;
+		int current_selected_ctrl_point;
     GLuint texture;
 
+		dynarray<vec3> ctrl_point_colors;
 		dynarray<vec3> vertices;
 		dynarray<vec2> uvs;
+    bool is_right_button_down;
     bool is_left_button_down;
+    bool toggle_wireframe;
 		static const int TERRAIN_WIDTH = 3;
 
   public:
@@ -53,7 +58,11 @@ namespace octet {
 	    mouse_x(0),
 	    mouse_y(0),
 	    mouse_wheel(0),
-	    is_left_button_down(false)
+	    is_right_button_down(false),
+	    is_left_button_down(false),
+			key_cool_down(0),
+			toggle_wireframe(false),
+			current_selected_ctrl_point(-1)
 	  {
 		  cc.set_view_distance(3.f);
 		  //cc.rotate_h(45);
@@ -65,7 +74,10 @@ namespace octet {
     // this is called once OpenGL is initialized
     void app_init() 
     {
-			sb.init("assets/terrain.gif");
+			glEnableVertexAttribArray(attribute_pos);
+			glEnableVertexAttribArray(attribute_uv);
+			glEnableVertexAttribArray(attribute_color);
+			sb.init("assets/sky_box.jpg");
 			glPointSize(5.f);
 			terrain.set_degree_u(3);
 			terrain.set_degree_v(3);
@@ -109,7 +121,7 @@ namespace octet {
       texture = resources::get_texture_handle(GL_RGB, "assets/terrain.gif");
 	    // initialize the shader
 	    shader_.init();
-	    color_shader.init();
+	    vertex_color_shader_.init();
 
 	    // put the triangle at the center of the world
 	    modelToWorld.loadIdentity();
@@ -122,7 +134,6 @@ namespace octet {
 	    glEnable(GL_BLEND);
 	    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	    */
-	    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
@@ -132,6 +143,10 @@ namespace octet {
 			terrain.add_ctrl_points(vec3(1, 1, 0));
 			terrain.add_ctrl_points(vec3(2, 1, 0));
 			terrain.add_ctrl_points(vec3(3, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			int index = 0;
 
 			static float offset = .5f;
@@ -140,6 +155,10 @@ namespace octet {
 			terrain.add_ctrl_points(vec3(1, 1 + offset, 1));
 			terrain.add_ctrl_points(vec3(2, 1 + offset, 1));
 			terrain.add_ctrl_points(vec3(3, 0 + offset, 1));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
 
 			static float offset1 = .5f;
 			//offset1 = 0;
@@ -147,6 +166,10 @@ namespace octet {
 			terrain.add_ctrl_points(vec3(1, 1 + offset1, 2));
 			terrain.add_ctrl_points(vec3(2, 1 + offset1, 2));
 			terrain.add_ctrl_points(vec3(3, 0 + offset1, 2));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
 
 			static float offset2 = 1.f;
 			//offset2 = 0;
@@ -154,13 +177,52 @@ namespace octet {
 			terrain.add_ctrl_points(vec3(1, 1 + offset2, 3));
 			terrain.add_ctrl_points(vec3(2, 1 + offset2, 3));
 			terrain.add_ctrl_points(vec3(3, 0 + offset2, 3));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			ctrl_point_colors.push_back(vec3(1, 0, 0));
+		}
+
+		void select_ctrl_point()
+		{
+			int x, y, w, h;
+			get_mouse_pos(x, y);
+			get_viewport_size(w, h);
+			vec3 target(x - w * .5f, h - y - h * .5f, -w / 2.f);
+			vec3 camera((vec3&)(cc.get_matrix()[3]));
+			target = target * cc.get_matrix();
+			vec3 ray((target - camera).normalize());
+
+			float k = -camera[2] / ray[2];
+			static float radius = .05f;
+
+			const dynarray<vec3> &points = terrain.get_ctrl_points();
+			float x0 = camera[0], y0 = camera[1], z0 = camera[2], x1 = ray[0], y1 = ray[1], z1 = ray[2];
+			for(unsigned int i = 0; i < points.size(); i++)
+			{
+				float x02 = x0 - points[i][0];
+				float y02 = y0 - points[i][1];
+				float z02 = z0 - points[i][2];
+
+				float a = x1 * x1 + y1 * y1 + z1 * z1;
+				float b = 2 * (-x1 * x02 - y1 * y02 - z1 * z02);
+				float c = x02 * x02+ y02 * y02 + z02 * z02 - radius * radius;
+
+				if(b * b - 4 * a * c >= 0)
+				{
+					ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 0, 0);
+					current_selected_ctrl_point = i;
+					ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 1, 0);
+				}
+			}
 		}
 
 		void draw_ctrl_points()
 		{
-      color_shader.render(modelToProjection, vec4(1, 0, 0, 1));
-      glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &terrain.get_ctrl_points()[0]);
-      glDrawArrays(GL_POINTS, 0, terrain.get_ctrl_points().size());
+			vertex_color_shader_.render(modelToProjection);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &terrain.get_ctrl_points()[0]);
+			glVertexAttribPointer(attribute_color, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &ctrl_point_colors[0]);
+			glDrawArrays(GL_POINTS, 0, terrain.get_ctrl_points().size());
 		}
 
 		void generate_terrain_mesh(int resolution)
@@ -199,13 +261,14 @@ namespace octet {
 			}
 		}
 
-    // this is called to draw the world
-    void draw_world(int x1, int y1, int w1, int h1) {
+		// this is called to draw the world
+		void draw_world(int x1, int y1, int w1, int h1) {
 			static DWORD lastFrameCount = 0;
 			static DWORD curFrameCount = 0;
-			static DWORD aa = GetTickCount();
+			DWORD tick_count = GetTickCount();
+			static DWORD aa = tick_count;
 			curFrameCount++;
-			int count = GetTickCount() - aa;
+			int count = tick_count - aa;
 			if(count >= 1000)
 			{
 				//printf("%d\n", (int)((curFrameCount - lastFrameCount) * 1000.f / count));
@@ -215,26 +278,34 @@ namespace octet {
 				lastFrameCount = curFrameCount;
 				aa += count;
 			}
-			terrain.add_weight_v(1, .001f);
-			/*
-				 static int ii = 0;
-				 printf("%d\n", ii++);
-			//*/
+			//terrain.add_weight_v(1, .001f);
 			// set a viewport - includes whole window area
 			glViewport(x1, y1, w1, h1);
 
 			// clear the background to black
 			glClearColor(0, 0, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			if(is_key_down(key_lmb) && !is_left_button_down)
+
+			if(is_key_down(key_lmb))
 			{
 				is_left_button_down = true;
-				get_mouse_pos(mouse_x, mouse_y);
-				SetCapture(get_hwnd());
 			}
-			else if(is_left_button_down && !is_key_down(key_lmb))
+			else if(is_left_button_down)
 			{
 				is_left_button_down = false;
+				select_ctrl_point();
+			}
+
+			if(is_key_down(key_rmb) && !is_right_button_down)
+			{
+				is_right_button_down = true;
+				get_mouse_pos(mouse_x, mouse_y);
+				SetCapture(get_hwnd());
+
+			}
+			else if(is_right_button_down && !is_key_down(key_rmb))
+			{
+				is_right_button_down = false;
 				ReleaseCapture();
 			}
 			int mouse_wheel_delta = get_mouse_wheel() - mouse_wheel;
@@ -253,10 +324,10 @@ namespace octet {
 			{
 				cc.add_view_distance(-factor2);
 			}
-			if(is_left_button_down)
+			if(is_right_button_down)
 			{
 				static float factor = .2f;
-				is_left_button_down = true;
+				is_right_button_down = true;
 				int x, y;
 				get_mouse_pos(x, y);
 				short sx = x, sy = y;
@@ -267,6 +338,23 @@ namespace octet {
 					cc.rotate_v((float)delta_y * factor);
 				mouse_x = sx;
 				mouse_y = sy;
+			}
+
+			if(is_key_down('P'))
+			{
+				if(tick_count - key_cool_down > 200)
+				{
+					key_cool_down = tick_count;
+					toggle_wireframe = !toggle_wireframe;
+					if(toggle_wireframe)
+					{
+						glPolygonMode(GL_FRONT, GL_LINE);
+					}
+					else
+					{
+						glPolygonMode(GL_FRONT, GL_FILL);
+					}
+				}
 			}
 
 			// build a projection matrix: model -> world -> camera -> projection
@@ -287,8 +375,6 @@ namespace octet {
 			glBindTexture(GL_TEXTURE_2D, texture);
 			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &vertices[0]);
 			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), &uvs[0]);
-			glEnableVertexAttribArray(attribute_pos);
-			glEnableVertexAttribArray(attribute_uv);
 
 			glDrawArrays(GL_QUADS, 0, 4 * COUNT * COUNT);
 

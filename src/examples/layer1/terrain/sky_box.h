@@ -81,7 +81,7 @@ namespace octet {
 		void init(char *path)
 		{
 			shader_.init();
-      texture = resources::get_texture_handle(GL_RGB, "assets/sky_box.jpg");
+      texture = resources::get_texture_handle(GL_RGB, path);
 		}
 
 		void render(const mat4t &modelToProjection, int sampler)

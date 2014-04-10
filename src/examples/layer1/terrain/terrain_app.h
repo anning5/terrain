@@ -33,6 +33,7 @@ namespace octet {
     terrain_shader shader_;
     color_shader color_shader;
 		nurbs_surface terrain;
+		sky_box sb;
 
     int mouse_x;
     int mouse_y;
@@ -64,6 +65,7 @@ namespace octet {
     // this is called once OpenGL is initialized
     void app_init() 
     {
+			sb.init("assets/terrain.gif");
 			glPointSize(5.f);
 			terrain.set_degree_u(3);
 			terrain.set_degree_v(3);
@@ -275,6 +277,7 @@ namespace octet {
 			//modelToWorld.rotateZ(.01);
 
 			// set up opengl to draw flat shaded triangles of a fixed color
+			sb.render(modelToProjection, 0);
 			shader_.render(modelToProjection, 0);
 
 			static const int COUNT = 10;
@@ -282,8 +285,8 @@ namespace octet {
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texture);
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &vertices[0][0]);
-			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), &uvs[0][0]);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &vertices[0]);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), &uvs[0]);
 			glEnableVertexAttribArray(attribute_pos);
 			glEnableVertexAttribArray(attribute_uv);
 

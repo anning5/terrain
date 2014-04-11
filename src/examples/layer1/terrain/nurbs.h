@@ -74,40 +74,28 @@ namespace octet {
 			knots_v[index] = k;
 		}
 
-		void add_weight_u(unsigned int index, float w)
+		void increase_weight_value_u(unsigned int index, float w)
 		{
-			if(index > weights_u.size())
+			if(index > ctrl_points.size())
 			{
 				return;
 			}
-			weights_u[index] += w;
+			int i = index % weights_u.size();
+			weights_u[i] += w;
+			if(weights_u[i] < 0)
+				weights_u[i] = 0.00001f;
 		}
 
-		void add_weight_v(unsigned int index, float w)
+		void increase_weight_value_v(unsigned int index, float w)
 		{
-			if(index > weights_v.size())
+			if(index > ctrl_points.size())
 			{
 				return;
 			}
-			weights_v[index] += w;
-		}
-
-		void set_weight_u(unsigned int index, float w)
-		{
-			if(index > weights_u.size())
-			{
-				return;
-			}
-			weights_u[index] = w;
-		}
-
-		void set_weight_v(unsigned int index, float w)
-		{
-			if(index > weights_v.size())
-			{
-				return;
-			}
-			weights_v[index] = w;
+			int i = index / weights_v.size();
+			weights_v[i] += w;
+			if(weights_v[i] < 0)
+				weights_v[i] = 0.00001f;
 		}
 
 		void add_weight_u(float w)

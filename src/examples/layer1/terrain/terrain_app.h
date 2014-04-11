@@ -48,6 +48,7 @@ namespace octet {
     bool is_right_button_down;
     bool is_left_button_down;
     bool toggle_wireframe;
+    bool toggle_ctrl_points;
 		static const int TERRAIN_WIDTH = 3;
 
   public:
@@ -62,6 +63,7 @@ namespace octet {
 	    is_left_button_down(false),
 			key_cool_down(0),
 			toggle_wireframe(false),
+			toggle_ctrl_points(true),
 			current_selected_ctrl_point(-1)
 	  {
 		  cc.set_view_distance(3.f);
@@ -89,14 +91,6 @@ namespace octet {
 			terrain.add_knot_u(1);
 			terrain.add_knot_u(1);
 			terrain.add_knot_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
 
 			terrain.add_knot_v(0);
 			terrain.add_knot_v(0);
@@ -106,14 +100,6 @@ namespace octet {
 			terrain.add_knot_v(1);
 			terrain.add_knot_v(1);
 			terrain.add_knot_v(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
 
 
 			create_ctrl_points();
@@ -139,9 +125,18 @@ namespace octet {
 
 		void create_ctrl_points()
 		{
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_u(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+			terrain.add_weight_v(1);
+
 			terrain.add_ctrl_points(vec3(0, 0, 0));
-			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 1, 0));
-			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 1, 0));
+			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 0));
+			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 0));
 			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -151,10 +146,10 @@ namespace octet {
 
 			static float offset = .5f;
 			//offset = 0;
-			terrain.add_ctrl_points(vec3(0, 0 + offset, 1));
-			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 1 + offset, 1));
-			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 1 + offset, 1));
-			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0 + offset, 1));
+			terrain.add_ctrl_points(vec3(0, 0, 1));
+			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 1));
+			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 1));
+			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 1));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -162,10 +157,10 @@ namespace octet {
 
 			static float offset1 = .5f;
 			//offset1 = 0;
-			terrain.add_ctrl_points(vec3(0, 0 + offset1, 2));
-			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 1 + offset1, 2));
-			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 1 + offset1, 2));
-			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0 + offset1, 2));
+			terrain.add_ctrl_points(vec3(0, 0, 2));
+			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 2));
+			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 2));
+			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 2));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -173,10 +168,10 @@ namespace octet {
 
 			static float offset2 = 1.f;
 			//offset2 = 0;
-			terrain.add_ctrl_points(vec3(0, 0 + offset2, 3));
-			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 1 + offset2, 3));
-			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 1 + offset2, 3));
-			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0 + offset2, 3));
+			terrain.add_ctrl_points(vec3(0, 0, 3));
+			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 3));
+			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 3));
+			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 3));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -264,6 +259,34 @@ namespace octet {
 			}
 		}
 
+		void move_ctrl_point(int x, int y)
+		{
+				if(mouse_x != x || mouse_y != y)
+				{
+					const dynarray<vec3> &ctrl_points = terrain.get_ctrl_points();
+					if(current_selected_ctrl_point < ctrl_points.size())
+					{
+						int w, h;
+						get_viewport_size(w, h);
+						float half_w = w * .5f;
+						float half_h = h * .5f;
+						vec3 ray(x - half_w, half_h - y, -half_w);
+						mat4t worldToCamera;
+						cc.get_matrix().invertQuick(worldToCamera);
+						const vec3 &ctrl_point = ctrl_points[current_selected_ctrl_point];
+						vec3 v =  ctrl_point * worldToCamera;
+						float k = v[2] / ray[2];
+						v[0] = ray[0] * k;
+						v[1] = ray[1] * k;
+						v[2] = ray[2] * k;
+						terrain.set_ctrl_points(current_selected_ctrl_point, view_to_world(v));
+					}
+
+					mouse_x = x;
+					mouse_y = y;
+				}
+		}
+
 		// this is called to draw the world
 		void draw_world(int x1, int y1, int w1, int h1) {
 			static DWORD lastFrameCount = 0;
@@ -309,31 +332,7 @@ namespace octet {
 				get_mouse_pos(x, y);
 				short sx = x, sy = y;
 				int delta_x = sx - mouse_x, delta_y = mouse_y - sy;
-
-				if(mouse_x != sx || mouse_y != sy)
-				{
-					const dynarray<vec3> &ctrl_points = terrain.get_ctrl_points();
-					if(current_selected_ctrl_point < ctrl_points.size())
-					{
-						int w, h;
-						get_viewport_size(w, h);
-						float half_w = w * .5f;
-						float half_h = h * .5f;
-						vec3 ray(sx - half_w, half_h - sy, -half_w);
-						mat4t worldToCamera;
-						cc.get_matrix().invertQuick(worldToCamera);
-						const vec3 &ctrl_point = ctrl_points[current_selected_ctrl_point];
-						vec3 v =  ctrl_point * worldToCamera;
-						float k = v[2] / ray[2];
-						v[0] = ray[0] * k;
-						v[1] = ray[1] * k;
-						v[2] = ray[2] * k;
-						terrain.set_ctrl_points(current_selected_ctrl_point, view_to_world(v));
-					}
-
-					mouse_x = sx;
-					mouse_y = sy;
-				}
+				move_ctrl_point(sx, sy);
 			}
 
 			//right mouse button
@@ -354,7 +353,7 @@ namespace octet {
 				int x, y;
 				get_mouse_pos(x, y);
 				short sx = x, sy = y;
-				int delta_x = mouse_x - x, delta_y = mouse_y - y;
+				int delta_x = mouse_x - sx, delta_y = mouse_y - sy;
 				if(delta_x != 0)
 					cc.rotate_h((float)delta_x * factor);
 				if(delta_y != 0)
@@ -380,9 +379,27 @@ namespace octet {
 				cc.add_view_distance(-factor2);
 			}
 
-			if(is_key_down('P'))
+			static float factor3 = .01f;
+			if(is_key_down(key_up))
 			{
-				if(tick_count - key_cool_down > 200)
+				terrain.increase_weight_value_u(current_selected_ctrl_point, factor3);
+			}
+			if(is_key_down(key_down))
+			{
+				terrain.increase_weight_value_u(current_selected_ctrl_point, -factor3);
+			}
+			if(is_key_down(key_left))
+			{
+				terrain.increase_weight_value_v(current_selected_ctrl_point, -factor3);
+			}
+			if(is_key_down(key_right))
+			{
+				terrain.increase_weight_value_v(current_selected_ctrl_point, factor3);
+			}
+
+			if(tick_count - key_cool_down > 200)
+			{
+				if(is_key_down('P'))
 				{
 					key_cool_down = tick_count;
 					toggle_wireframe = !toggle_wireframe;
@@ -394,6 +411,11 @@ namespace octet {
 					{
 						glPolygonMode(GL_FRONT, GL_FILL);
 					}
+				}
+				if(is_key_down('C'))
+				{
+					key_cool_down = tick_count;
+					toggle_ctrl_points = !toggle_ctrl_points;
 				}
 			}
 
@@ -418,7 +440,10 @@ namespace octet {
 
 			glDrawArrays(GL_QUADS, 0, 4 * COUNT * COUNT);
 
-			draw_ctrl_points();
+			if(toggle_ctrl_points)
+			{
+				draw_ctrl_points();
+			}
 		}
 	};
 }

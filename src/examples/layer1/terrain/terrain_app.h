@@ -171,19 +171,14 @@ namespace octet {
 
 		void create_ctrl_points()
 		{
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_u(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
-			terrain.add_weight_v(1);
-
 			terrain.add_ctrl_points(vec3(0, 0, 0));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 0));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 0));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 0));
+			terrain.add_weight(1);
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -193,9 +188,13 @@ namespace octet {
 			static float offset = .5f;
 			//offset = 0;
 			terrain.add_ctrl_points(vec3(0, 0, 1));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 1));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 1));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 1));
+			terrain.add_weight(1);
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -204,9 +203,13 @@ namespace octet {
 			static float offset1 = .5f;
 			//offset1 = 0;
 			terrain.add_ctrl_points(vec3(0, 0, 2));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 2));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 2));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 2));
+			terrain.add_weight(1);
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -215,9 +218,13 @@ namespace octet {
 			static float offset2 = 1.f;
 			//offset2 = 0;
 			terrain.add_ctrl_points(vec3(0, 0, 3));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 3));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 3));
+			terrain.add_weight(1);
 			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 3));
+			terrain.add_weight(1);
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			ctrl_point_colors.push_back(vec3(1, 0, 0));
@@ -329,11 +336,11 @@ namespace octet {
 						v[2] = ray[2] * k;
 						terrain.set_ctrl_points(current_selected_ctrl_point, view_to_world(v));
 					}
-
 					mouse_x = x;
 					mouse_y = y;
 				}
 				generate_terrain_mesh();
+				buffer_ctrl_points_vertices();
 		}
 
 		void handle_messages()
@@ -409,22 +416,12 @@ namespace octet {
 			static float factor3 = .01f;
 			if(is_key_down(key_up))
 			{
-				terrain.increase_weight_value_u(current_selected_ctrl_point, factor3);
+				terrain.increase_weight_value(current_selected_ctrl_point, factor3);
 				generate_terrain_mesh();
 			}
 			if(is_key_down(key_down))
 			{
-				terrain.increase_weight_value_u(current_selected_ctrl_point, -factor3);
-				generate_terrain_mesh();
-			}
-			if(is_key_down(key_left))
-			{
-				terrain.increase_weight_value_v(current_selected_ctrl_point, -factor3);
-				generate_terrain_mesh();
-			}
-			if(is_key_down(key_right))
-			{
-				terrain.increase_weight_value_v(current_selected_ctrl_point, factor3);
+				terrain.increase_weight_value(current_selected_ctrl_point, -factor3);
 				generate_terrain_mesh();
 			}
 
@@ -453,13 +450,16 @@ namespace octet {
 					key_cool_down = tick_count;
 					if(is_key_down(key_shift))
 					{
-						resolution--;
+						if(resolution != 0)
+						{
+							resolution--;
+						}
 					}
 					else
 					{
 						resolution++;
-						generate_terrain_mesh();
 					}
+					generate_terrain_mesh();
 				}
 			}
 		}
@@ -482,7 +482,6 @@ namespace octet {
 				aa += count;
 			}
 			handle_messages();
-			//terrain.add_weight_v(1, .001f);
 			// set a viewport - includes whole window area
 			glViewport(x, y, w, h);
 

@@ -2,9 +2,12 @@ namespace octet {
 	class sky_box
 	{
 		texture_shader shader_;
+		mat4t modelToWorld;
 		vec3 vertices[24];
 		vec2 uvs[24];
 		GLuint texture;
+		GLuint vao;
+		GLuint vbo;
 	public:
 
 		sky_box()
@@ -76,22 +79,46 @@ namespace octet {
 			uvs[21] = vec2(u + du, v);
 			uvs[22] = vec2(u + du, v - dv);
 			uvs[23] = vec2(u, v - dv);
+
+			modelToWorld.loadIdentity();
+
+		}
+
+		void set_position(const vec3 &pos)
+		{
+			modelToWorld.loadIdentity();
+			modelToWorld.translate(pos[0], pos[1], pos[2]);
 		}
 
 		void init(char *path)
 		{
 			shader_.init();
       texture = resources::get_texture_handle(GL_RGB, path);
+			glGenVertexArrays(1, &vao);
+			glBindVertexArray(vao);
+
+			glGenBuffers(1, &vbo);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBufferData(GL_ARRAY_BUFFER, 24 * 5 * sizeof(float), NULL, GL_STATIC_DRAW);
+			int pos_array_size = 24 * 3 * sizeof(float);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, pos_array_size, &vertices[0]);
+			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, 24 * 2 * sizeof(float), &uvs[0]);
+
+			glEnableVertexAttribArray(attribute_pos);
+			glEnableVertexAttribArray(attribute_uv);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), 0);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)pos_array_size);
+			glBindVertexArray(0);
 		}
 
 		void render(const mat4t &modelToProjection, int sampler)
 		{
-			shader_.render(modelToProjection, sampler);
+			shader_.render(modelToWorld * modelToProjection, sampler);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texture);
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &vertices[0]);
-			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), &uvs[0]);
+			glBindVertexArray(vao);
 			glDrawArrays(GL_QUADS, 0, 24);
+			glBindVertexArray(0);
 		}
 	};
 }

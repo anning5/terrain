@@ -41,6 +41,10 @@ namespace octet {
 		int key_cool_down;
 		unsigned int current_selected_ctrl_point;
     GLuint texture;
+    GLuint vbo_terrain;
+    GLuint vbo_ctrl_points;
+    GLuint vao_terrain;
+    GLuint vao_ctrl_points;
 
 		dynarray<vec3> ctrl_point_colors;
 		dynarray<vec3> vertices;
@@ -73,12 +77,50 @@ namespace octet {
 		  mouse_wheel = get_mouse_wheel();
 	  }
 
+		void buffer_terrain_vertices()
+		{
+			glGenVertexArrays(1, &vao_terrain);
+			glBindVertexArray(vao_terrain);
+
+			glGenBuffers(1, &vbo_terrain);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo_terrain);
+			int pos_array_size = vertices.size() * sizeof(float) * 3;
+			glBufferData(GL_ARRAY_BUFFER, pos_array_size + uvs.size() * sizeof(float) * 2, NULL, GL_STATIC_DRAW);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, pos_array_size, &vertices[0]);
+			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, uvs.size() * 2 * sizeof(float), &uvs[0]);
+
+			glEnableVertexAttribArray(attribute_pos);
+			glEnableVertexAttribArray(attribute_uv);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), 0);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)pos_array_size);
+			glBindVertexArray(0);
+		}
+
+		void buffer_ctrl_points_vertices()
+		{
+			glGenVertexArrays(1, &vao_ctrl_points);
+			glBindVertexArray(vao_ctrl_points);
+
+			glGenBuffers(1, &vbo_ctrl_points);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo_ctrl_points);
+			int pos_array_size = terrain.get_ctrl_points().size() * sizeof(float) * 3;
+			glBufferData(GL_ARRAY_BUFFER, pos_array_size + ctrl_point_colors.size() * sizeof(float) * 3, NULL, GL_STATIC_DRAW);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, pos_array_size, &terrain.get_ctrl_points()[0]);
+			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, ctrl_point_colors.size() * 3 * sizeof(float), &ctrl_point_colors[0]);
+
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), 0);
+			glVertexAttribPointer(attribute_color, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)pos_array_size);
+			glEnableVertexAttribArray(attribute_pos);
+			glEnableVertexAttribArray(attribute_color);
+			glBindVertexArray(0);
+		}
+
     // this is called once OpenGL is initialized
     void app_init() 
     {
 			glEnableVertexAttribArray(attribute_pos);
 			glEnableVertexAttribArray(attribute_uv);
-			glEnableVertexAttribArray(attribute_color);
+			//glEnableVertexAttribArray(attribute_color);
 			sb.init("assets/sky_box.jpg");
 			glPointSize(5.f);
 			terrain.set_degree_u(3);
@@ -103,6 +145,7 @@ namespace octet {
 
 
 			create_ctrl_points();
+			buffer_ctrl_points_vertices();
 			
       texture = resources::get_texture_handle(GL_RGB, "assets/terrain.gif");
 	    // initialize the shader
@@ -218,9 +261,9 @@ namespace octet {
 		void draw_ctrl_points()
 		{
 			vertex_color_shader_.render(modelToProjection);
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &terrain.get_ctrl_points()[0]);
-			glVertexAttribPointer(attribute_color, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &ctrl_point_colors[0]);
+			glBindVertexArray(vao_ctrl_points);
 			glDrawArrays(GL_POINTS, 0, terrain.get_ctrl_points().size());
+			glBindVertexArray(0);
 		}
 
 		void generate_terrain_mesh(int resolution)
@@ -257,6 +300,7 @@ namespace octet {
 				}
 				v += dv;
 			}
+			buffer_terrain_vertices();
 		}
 
 		void move_ctrl_point(int x, int y)
@@ -287,31 +331,9 @@ namespace octet {
 				}
 		}
 
-		// this is called to draw the world
-		void draw_world(int x1, int y1, int w1, int h1) {
-			static DWORD lastFrameCount = 0;
-			static DWORD curFrameCount = 0;
+		void handle_messages()
+		{
 			DWORD tick_count = GetTickCount();
-			static DWORD aa = tick_count;
-			curFrameCount++;
-			int count = tick_count - aa;
-			if(count >= 1000)
-			{
-				//printf("%d\n", (int)((curFrameCount - lastFrameCount) * 1000.f / count));
-				char buf[256];
-				sprintf(buf, "%d", (int)((curFrameCount - lastFrameCount) * 1000.f / count));
-				SetWindowTextA(get_hwnd(), buf);
-				lastFrameCount = curFrameCount;
-				aa += count;
-			}
-			//terrain.add_weight_v(1, .001f);
-			// set a viewport - includes whole window area
-			glViewport(x1, y1, w1, h1);
-
-			// clear the background to black
-			glClearColor(0, 0, 0, 1);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 			//left mouse button
 			if(is_key_down(key_lmb) && !is_left_button_down)
 			{
@@ -418,6 +440,34 @@ namespace octet {
 					toggle_ctrl_points = !toggle_ctrl_points;
 				}
 			}
+		}
+
+		// this is called to draw the world
+		void draw_world(int x, int y, int w, int h) {
+			static DWORD lastFrameCount = 0;
+			static DWORD curFrameCount = 0;
+			DWORD tick_count = GetTickCount();
+			static DWORD aa = tick_count;
+			curFrameCount++;
+			int count = tick_count - aa;
+			if(count >= 1000)
+			{
+				//printf("%d\n", (int)((curFrameCount - lastFrameCount) * 1000.f / count));
+				char buf[256];
+				sprintf(buf, "%d", (int)((curFrameCount - lastFrameCount) * 1000.f / count));
+				SetWindowTextA(get_hwnd(), buf);
+				lastFrameCount = curFrameCount;
+				aa += count;
+			}
+			handle_messages();
+			//terrain.add_weight_v(1, .001f);
+			// set a viewport - includes whole window area
+			glViewport(x, y, w, h);
+
+			// clear the background to black
+			glClearColor(0, 0, 0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
 			// build a projection matrix: model -> world -> camera -> projection
 			// the projection space is the cube -1 <= x/w, y/w, z/w <= 1
@@ -435,10 +485,10 @@ namespace octet {
 
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texture);
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), &vertices[0]);
-			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), &uvs[0]);
 
+			glBindVertexArray(vao_terrain);
 			glDrawArrays(GL_QUADS, 0, 4 * COUNT * COUNT);
+			glBindVertexArray(0);
 
 			if(toggle_ctrl_points)
 			{

@@ -39,6 +39,7 @@ namespace octet {
     int mouse_y;
     int mouse_wheel;
 		int key_cool_down;
+		int resolution;
 		unsigned int current_selected_ctrl_point;
     GLuint texture;
     GLuint vbo_terrain;
@@ -68,7 +69,8 @@ namespace octet {
 			key_cool_down(0),
 			toggle_wireframe(false),
 			toggle_ctrl_points(true),
-			current_selected_ctrl_point(-1)
+			current_selected_ctrl_point(-1),
+			resolution(10)
 	  {
 		  cc.set_view_distance(3.f);
 		  //cc.rotate_h(45);
@@ -146,8 +148,9 @@ namespace octet {
 
 			create_ctrl_points();
 			buffer_ctrl_points_vertices();
+			generate_terrain_mesh();
 			
-      texture = resources::get_texture_handle(GL_RGB, "assets/terrain.gif");
+      texture = resources::get_texture_handle(GL_RGB, "assets/terrain.jpg");
 	    // initialize the shader
 	    shader_.init();
 	    vertex_color_shader_.init();
@@ -256,6 +259,7 @@ namespace octet {
 					ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 1, 0);
 				}
 			}
+			buffer_ctrl_points_vertices();
 		}
 
 		void draw_ctrl_points()
@@ -266,7 +270,7 @@ namespace octet {
 			glBindVertexArray(0);
 		}
 
-		void generate_terrain_mesh(int resolution)
+		void generate_terrain_mesh()
 		{
 			vertices.resize(resolution * resolution * 4);
 			uvs.resize(resolution * resolution * 4);
@@ -329,6 +333,7 @@ namespace octet {
 					mouse_x = x;
 					mouse_y = y;
 				}
+				generate_terrain_mesh();
 		}
 
 		void handle_messages()
@@ -405,18 +410,22 @@ namespace octet {
 			if(is_key_down(key_up))
 			{
 				terrain.increase_weight_value_u(current_selected_ctrl_point, factor3);
+				generate_terrain_mesh();
 			}
 			if(is_key_down(key_down))
 			{
 				terrain.increase_weight_value_u(current_selected_ctrl_point, -factor3);
+				generate_terrain_mesh();
 			}
 			if(is_key_down(key_left))
 			{
 				terrain.increase_weight_value_v(current_selected_ctrl_point, -factor3);
+				generate_terrain_mesh();
 			}
 			if(is_key_down(key_right))
 			{
 				terrain.increase_weight_value_v(current_selected_ctrl_point, factor3);
+				generate_terrain_mesh();
 			}
 
 			if(tick_count - key_cool_down > 200)
@@ -438,6 +447,19 @@ namespace octet {
 				{
 					key_cool_down = tick_count;
 					toggle_ctrl_points = !toggle_ctrl_points;
+				}
+				if(is_key_down('R'))
+				{
+					key_cool_down = tick_count;
+					if(is_key_down(key_shift))
+					{
+						resolution--;
+					}
+					else
+					{
+						resolution++;
+						generate_terrain_mesh();
+					}
 				}
 			}
 		}
@@ -480,14 +502,11 @@ namespace octet {
 			sb.render(modelToProjection, 0);
 			shader_.render(modelToProjection, 0);
 
-			static const int COUNT = 10;
-			generate_terrain_mesh(COUNT);
-
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texture);
 
 			glBindVertexArray(vao_terrain);
-			glDrawArrays(GL_QUADS, 0, 4 * COUNT * COUNT);
+			glDrawArrays(GL_QUADS, 0, 4 * resolution * resolution);
 			glBindVertexArray(0);
 
 			if(toggle_ctrl_points)

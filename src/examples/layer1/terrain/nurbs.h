@@ -26,7 +26,7 @@ namespace octet {
 			get_basis_functions(degree_v, v, knots_v, basis_v);
 			unsigned int u_count = basis_u.size(), v_count = basis_v.size();
 			int index = 0;
-			float factor = 0, temp = 0;
+			float factor = 0;
 			for(unsigned int i = 0; i < u_count; i++)
 			{
 				float temp = 0;

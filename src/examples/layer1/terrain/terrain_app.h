@@ -40,6 +40,8 @@ namespace octet {
     int mouse_wheel;
 		int key_cool_down;
 		int resolution;
+		int ctrl_point_count;
+		int degree;
 		unsigned int current_selected_ctrl_point;
     GLuint texture;
     GLuint vbo_terrain;
@@ -70,7 +72,9 @@ namespace octet {
 			toggle_wireframe(false),
 			toggle_ctrl_points(true),
 			current_selected_ctrl_point(-1),
-			resolution(10)
+			resolution(30),
+			ctrl_point_count(20),
+			degree(3)
 	  {
 		  cc.set_view_distance(3.f);
 		  //cc.rotate_h(45);
@@ -117,6 +121,20 @@ namespace octet {
 			glBindVertexArray(0);
 		}
 
+		void nurbs_init()
+		{
+			terrain.set_degree_u(degree);
+			terrain.set_degree_v(degree);
+			for(int i = 0; i < ctrl_point_count + degree + 1; i++)
+			{
+				terrain.add_knot_u((float)i);
+				terrain.add_knot_v((float)i);
+			}
+
+			create_ctrl_points();
+			generate_terrain_mesh();
+		}
+
     // this is called once OpenGL is initialized
     void app_init() 
     {
@@ -125,30 +143,7 @@ namespace octet {
 			//glEnableVertexAttribArray(attribute_color);
 			sb.init("assets/sky_box.jpg");
 			glPointSize(5.f);
-			terrain.set_degree_u(3);
-			terrain.set_degree_v(3);
-			terrain.add_knot_u(0);
-			terrain.add_knot_u(0);
-			terrain.add_knot_u(0);
-			terrain.add_knot_u(0);
-			terrain.add_knot_u(1);
-			terrain.add_knot_u(1);
-			terrain.add_knot_u(1);
-			terrain.add_knot_u(1);
-
-			terrain.add_knot_v(0);
-			terrain.add_knot_v(0);
-			terrain.add_knot_v(0);
-			terrain.add_knot_v(0);
-			terrain.add_knot_v(1);
-			terrain.add_knot_v(1);
-			terrain.add_knot_v(1);
-			terrain.add_knot_v(1);
-
-
-			create_ctrl_points();
-			buffer_ctrl_points_vertices();
-			generate_terrain_mesh();
+			nurbs_init();
 			
       texture = resources::get_texture_handle(GL_RGB, "assets/terrain.jpg");
 	    // initialize the shader
@@ -171,64 +166,19 @@ namespace octet {
 
 		void create_ctrl_points()
 		{
-			terrain.add_ctrl_points(vec3(0, 0, 0));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 0));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 0));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 0));
-			terrain.add_weight(1);
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
 			int index = 0;
+			float offset = TERRAIN_WIDTH / (float)ctrl_point_count;
+			for(int i = 0; i < ctrl_point_count; i++)
+			{
+				for(int j = 0; j < ctrl_point_count; j++)
+				{
+					terrain.add_ctrl_points(vec3(j * offset, 0, offset * i));
+					terrain.add_weight(1);
+					ctrl_point_colors.push_back(vec3(1, 0, 0));
+				}
+			}
 
-			static float offset = .5f;
-			//offset = 0;
-			terrain.add_ctrl_points(vec3(0, 0, 1));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 1));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 1));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 1));
-			terrain.add_weight(1);
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-
-			static float offset1 = .5f;
-			//offset1 = 0;
-			terrain.add_ctrl_points(vec3(0, 0, 2));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 2));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 2));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 2));
-			terrain.add_weight(1);
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-
-			static float offset2 = 1.f;
-			//offset2 = 0;
-			terrain.add_ctrl_points(vec3(0, 0, 3));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(1 * TERRAIN_WIDTH / 3.f, 0, 3));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(2 * TERRAIN_WIDTH / 3.f, 0, 3));
-			terrain.add_weight(1);
-			terrain.add_ctrl_points(vec3(3 * TERRAIN_WIDTH / 3.f, 0, 3));
-			terrain.add_weight(1);
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
-			ctrl_point_colors.push_back(vec3(1, 0, 0));
+			buffer_ctrl_points_vertices();
 		}
 
 		vec3 view_to_world(const vec3 &v)
@@ -249,7 +199,8 @@ namespace octet {
 
 			const dynarray<vec3> &points = terrain.get_ctrl_points();
 			float x0 = camera[0], y0 = camera[1], z0 = camera[2], x1 = ray[0], y1 = ray[1], z1 = ray[2];
-			for(unsigned int i = 0; i < points.size(); i++)
+			unsigned int i = 0;
+			for(; i < points.size(); i++)
 			{
 				float x02 = x0 - points[i][0];
 				float y02 = y0 - points[i][1];
@@ -264,7 +215,13 @@ namespace octet {
 					ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 0, 0);
 					current_selected_ctrl_point = i;
 					ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 1, 0);
+					break;
 				}
+			}
+			if(i == points.size())
+			{
+					ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 0, 0);
+					current_selected_ctrl_point = -1;
 			}
 			buffer_ctrl_points_vertices();
 		}
@@ -279,13 +236,19 @@ namespace octet {
 
 		void generate_terrain_mesh()
 		{
+			float start = terrain.get_knot_u(degree), end = terrain.get_knot_u(terrain.get_knot_count_u() - 1 - degree);
+			if(start == INVALID_KNOT_VALUE || end == INVALID_KNOT_VALUE)
+			{
+				return;
+			}
 			vertices.resize(resolution * resolution * 4);
 			uvs.resize(resolution * resolution * 4);
 			int index = 0;
-			float du = 1.f / resolution, dv = 1.f / resolution, u = 0, v = 0;
+			float length = end - start;
+			float du = length / resolution, dv = length / resolution, u = start, v = start;
 			for(int i = 0; i < resolution; i++)
 			{
-				u = 0;
+				u = start;
 				for(int j = 0; j < resolution; j++)
 				{
 					terrain.get_surface_vertex(vertices[index], u, v);
@@ -316,31 +279,31 @@ namespace octet {
 
 		void move_ctrl_point(int x, int y)
 		{
-				if(mouse_x != x || mouse_y != y)
+			if(mouse_x != x || mouse_y != y)
+			{
+				const dynarray<vec3> &ctrl_points = terrain.get_ctrl_points();
+				if(current_selected_ctrl_point < ctrl_points.size())
 				{
-					const dynarray<vec3> &ctrl_points = terrain.get_ctrl_points();
-					if(current_selected_ctrl_point < ctrl_points.size())
-					{
-						int w, h;
-						get_viewport_size(w, h);
-						float half_w = w * .5f;
-						float half_h = h * .5f;
-						vec3 ray(x - half_w, half_h - y, -half_w);
-						mat4t worldToCamera;
-						cc.get_matrix().invertQuick(worldToCamera);
-						const vec3 &ctrl_point = ctrl_points[current_selected_ctrl_point];
-						vec3 v =  ctrl_point * worldToCamera;
-						float k = v[2] / ray[2];
-						v[0] = ray[0] * k;
-						v[1] = ray[1] * k;
-						v[2] = ray[2] * k;
-						terrain.set_ctrl_points(current_selected_ctrl_point, view_to_world(v));
-					}
-					mouse_x = x;
-					mouse_y = y;
+					int w, h;
+					get_viewport_size(w, h);
+					float half_w = w * .5f;
+					float half_h = h * .5f;
+					vec3 ray(x - half_w, half_h - y, -half_w);
+					mat4t worldToCamera;
+					cc.get_matrix().invertQuick(worldToCamera);
+					const vec3 &ctrl_point = ctrl_points[current_selected_ctrl_point];
+					vec3 v =  ctrl_point * worldToCamera;
+					float k = v[2] / ray[2];
+					v[0] = ray[0] * k;
+					v[1] = ray[1] * k;
+					v[2] = ray[2] * k;
+					terrain.set_ctrl_points(current_selected_ctrl_point, view_to_world(v));
 				}
 				generate_terrain_mesh();
 				buffer_ctrl_points_vertices();
+				mouse_x = x;
+				mouse_y = y;
+			}
 		}
 
 		void handle_messages()

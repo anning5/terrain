@@ -1,4 +1,5 @@
 namespace octet {
+	const float INVALID_KNOT_VALUE = 9999999.f;
 
 	class nurbs_surface
 	{
@@ -53,6 +54,34 @@ namespace octet {
 				vertex += basis_v[k] * vertices_v[k];
 			}
 			vertex = vertex * factor;
+		}
+
+		int get_knot_count_u()
+		{
+			return knots_u.size();
+		}	
+
+		int get_knot_count_v()
+		{
+			return knots_v.size();
+		}	
+
+		float get_knot_u(unsigned int index)
+		{
+			if(index >= knots_u.size())
+			{
+				return INVALID_KNOT_VALUE;
+			}
+			return knots_u[index];
+		}
+
+		float get_knot_v(unsigned int index)
+		{
+			if(index >= knots_v.size())
+			{
+				return INVALID_KNOT_VALUE;
+			}
+			return knots_v[index];
 		}
 
 		void set_knot_u(unsigned int index, float k)

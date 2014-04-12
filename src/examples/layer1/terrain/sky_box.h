@@ -12,9 +12,9 @@ namespace octet {
 
 		sky_box()
 		{
-			const float HALF_WIDTH = 200.f;
+			const float HALF_WIDTH = 500.f;
 			//top
-			float u = 1.f / 4, du = 1.f / 4, v = 1.f, dv = 1.f / 3, offset = HALF_WIDTH * 0.005f;
+			float u = 1.f / 4, du = 1.f / 4, v = 1.f, dv = 1.f / 3, offset = 2.f;
 			vertices[0] = vec3(-HALF_WIDTH, HALF_WIDTH - offset, -HALF_WIDTH);
 			vertices[1] = vec3(HALF_WIDTH, HALF_WIDTH - offset, -HALF_WIDTH);
 			vertices[2] = vec3(HALF_WIDTH, HALF_WIDTH - offset, HALF_WIDTH);

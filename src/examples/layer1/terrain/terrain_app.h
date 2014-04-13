@@ -56,7 +56,7 @@ namespace octet {
     bool is_left_button_down;
     bool toggle_wireframe;
     bool toggle_ctrl_points;
-		static const int TERRAIN_WIDTH = 3;
+		static const int TERRAIN_WIDTH = 20;
 
   public:
 
@@ -70,16 +70,18 @@ namespace octet {
 	    is_left_button_down(false),
 			key_cool_down(0),
 			toggle_wireframe(false),
-			toggle_ctrl_points(true),
+			toggle_ctrl_points(false),
 			current_selected_ctrl_point(-1),
-			resolution(30),
-			ctrl_point_count(20),
+			resolution(50),
+			ctrl_point_count(10),
 			degree(3)
 	  {
 		  cc.set_view_distance(3.f);
 		  //cc.rotate_h(45);
-		  cc.rotate_v(-45);
-		  cc.set_view_position(vec3(TERRAIN_WIDTH / 2.f, TERRAIN_WIDTH / 2.f, TERRAIN_WIDTH / 2.f));
+		  cc.rotate_v(-25);
+			float span = (float)TERRAIN_WIDTH / ctrl_point_count;
+			float offset = (TERRAIN_WIDTH - span) * .5f;
+		  cc.set_view_position(vec3(offset, 0, offset));
 		  mouse_wheel = get_mouse_wheel();
 	  }
 
@@ -121,8 +123,9 @@ namespace octet {
 			glBindVertexArray(0);
 		}
 
-		void nurbs_init()
+		void reset_terrain()
 		{
+			terrain.reset();
 			terrain.set_degree_u(degree);
 			terrain.set_degree_v(degree);
 			for(int i = 0; i < ctrl_point_count + degree + 1; i++)
@@ -131,19 +134,16 @@ namespace octet {
 				terrain.add_knot_v((float)i);
 			}
 
-			create_ctrl_points();
+			reset_ctrl_points();
 			generate_terrain_mesh();
 		}
 
     // this is called once OpenGL is initialized
     void app_init() 
     {
-			glEnableVertexAttribArray(attribute_pos);
-			glEnableVertexAttribArray(attribute_uv);
-			//glEnableVertexAttribArray(attribute_color);
 			sb.init("assets/sky_box.jpg");
 			glPointSize(5.f);
-			nurbs_init();
+			reset_terrain();
 			
       texture = resources::get_texture_handle(GL_RGB, "assets/terrain.jpg");
 	    // initialize the shader
@@ -164,8 +164,9 @@ namespace octet {
 	    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-		void create_ctrl_points()
+		void reset_ctrl_points()
 		{
+			ctrl_point_colors.reset();
 			int index = 0;
 			float offset = TERRAIN_WIDTH / (float)ctrl_point_count;
 			for(int i = 0; i < ctrl_point_count; i++)
@@ -195,7 +196,7 @@ namespace octet {
 			vec3 camera((vec3&)(cc.get_matrix()[3]));
 			vec3 ray((view_to_world(target) - camera).normalize());
 
-			static float radius = .05f;
+			static float radius = .1f;
 
 			const dynarray<vec3> &points = terrain.get_ctrl_points();
 			float x0 = camera[0], y0 = camera[1], z0 = camera[2], x1 = ray[0], y1 = ray[1], z1 = ray[2];
@@ -212,13 +213,16 @@ namespace octet {
 
 				if(b * b - 4 * a * c >= 0)
 				{
-					ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 0, 0);
+					if(current_selected_ctrl_point < ctrl_point_colors.size())
+					{
+						ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 0, 0);
+					}
 					current_selected_ctrl_point = i;
 					ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 1, 0);
 					break;
 				}
 			}
-			if(i == points.size())
+			if(i == points.size() && current_selected_ctrl_point < ctrl_point_colors.size())
 			{
 					ctrl_point_colors[current_selected_ctrl_point] = vec3(1, 0, 0);
 					current_selected_ctrl_point = -1;
@@ -298,9 +302,9 @@ namespace octet {
 					v[1] = ray[1] * k;
 					v[2] = ray[2] * k;
 					terrain.set_ctrl_points(current_selected_ctrl_point, view_to_world(v));
+					generate_terrain_mesh();
+					buffer_ctrl_points_vertices();
 				}
-				generate_terrain_mesh();
-				buffer_ctrl_points_vertices();
 				mouse_x = x;
 				mouse_y = y;
 			}
@@ -390,7 +394,7 @@ namespace octet {
 
 			if(tick_count - key_cool_down > 200)
 			{
-				if(is_key_down('P'))
+				if(is_key_down('Z'))
 				{
 					key_cool_down = tick_count;
 					toggle_wireframe = !toggle_wireframe;
@@ -423,6 +427,22 @@ namespace octet {
 						resolution++;
 					}
 					generate_terrain_mesh();
+				}
+				if(is_key_down('F'))
+				{
+					key_cool_down = tick_count;
+					if(is_key_down(key_shift))
+					{
+						if(ctrl_point_count != 0)
+						{
+							ctrl_point_count--;
+						}
+					}
+					else
+					{
+						ctrl_point_count++;
+					}
+					reset_terrain();
 				}
 			}
 		}
@@ -473,7 +493,9 @@ namespace octet {
 
 			if(toggle_ctrl_points)
 			{
+				glDisable(GL_DEPTH_TEST);
 				draw_ctrl_points();
+				glEnable(GL_DEPTH_TEST);
 			}
 		}
 	};

@@ -54,14 +54,25 @@ namespace octet {
       } else {
         FILE *file = fopen(get_path(url), "rb");
         if (!file) {
-          printf("file %s not found\n", get_path(url));
-        } else {
-          fseek(file, 0, SEEK_END);
-          buffer.resize((unsigned)ftell(file));
-          fseek(file, 0, SEEK_SET);
-          fread(buffer.data(), 1, buffer.size(), file);
-          fclose(file);
+					for(int i = strlen(url) - 1; i >= 0; i--)
+					{
+						if(url[i] == '\\' || url[i] == '/')
+						{
+							file = fopen(url + i + 1, "rb");
+							if(file != NULL)
+							{
+								break;
+							}
+							printf("file %s not found\n", get_path(url));
+							return;
+						}
+					}
         }
+				fseek(file, 0, SEEK_END);
+				buffer.resize((unsigned)ftell(file));
+				fseek(file, 0, SEEK_SET);
+				fread(buffer.data(), 1, buffer.size(), file);
+				fclose(file);
       }
     }
 

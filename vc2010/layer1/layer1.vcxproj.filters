@@ -217,6 +217,9 @@
     <ClInclude Include="..\..\src\examples\layer1\terrain\sky_box.h">
       <Filter>terrain</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\examples\layer1\terrain\water_surface.h">
+      <Filter>terrain</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\resources\mesh_builder.inl">

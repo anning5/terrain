@@ -16,6 +16,7 @@
 //*/
 
 //
+#include "terrain/water_surface.h"
 #include "terrain/sky_box.h"
 #include "terrain/nurbs.h"
 #include "terrain/terrain_app.h"

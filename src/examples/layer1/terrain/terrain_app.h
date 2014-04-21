@@ -33,6 +33,7 @@ namespace octet {
     terrain_shader shader_;
     vertex_color_shader vertex_color_shader_;
 		nurbs_surface terrain;
+		water_surface water;
 		sky_box sb;
 
     int mouse_x;
@@ -51,6 +52,7 @@ namespace octet {
 
 		dynarray<vec3> ctrl_point_colors;
 		dynarray<vec3> vertices;
+		dynarray<vec3> normals;
 		dynarray<vec2> uvs;
     bool is_right_button_down;
     bool is_left_button_down;
@@ -87,39 +89,35 @@ namespace octet {
 
 		void buffer_terrain_vertices()
 		{
-			glGenVertexArrays(1, &vao_terrain);
 			glBindVertexArray(vao_terrain);
 
-			glGenBuffers(1, &vbo_terrain);
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_terrain);
-			int pos_array_size = vertices.size() * sizeof(float) * 3;
-			glBufferData(GL_ARRAY_BUFFER, pos_array_size + uvs.size() * sizeof(float) * 2, NULL, GL_STATIC_DRAW);
+			int pos_array_size = vertices.size() * sizeof(vec3);
+			int uv_array_size = uvs.size() * sizeof(vec2);
+			int normal_array_size = normals.size() * sizeof(vec3);
+			glBufferData(GL_ARRAY_BUFFER, pos_array_size + uv_array_size + normal_array_size, NULL, GL_STATIC_DRAW);
 			glBufferSubData(GL_ARRAY_BUFFER, 0, pos_array_size, &vertices[0]);
-			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, uvs.size() * 2 * sizeof(float), &uvs[0]);
+			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, uv_array_size, &uvs[0]);
+			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size + uv_array_size, normal_array_size, &normals[0]);
 
-			glEnableVertexAttribArray(attribute_pos);
-			glEnableVertexAttribArray(attribute_uv);
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), 0);
-			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)pos_array_size);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (void*)pos_array_size);
+			glVertexAttribPointer(attribute_normal, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(pos_array_size + uv_array_size));
 			glBindVertexArray(0);
 		}
 
 		void buffer_ctrl_points_vertices()
 		{
-			glGenVertexArrays(1, &vao_ctrl_points);
 			glBindVertexArray(vao_ctrl_points);
 
-			glGenBuffers(1, &vbo_ctrl_points);
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_ctrl_points);
-			int pos_array_size = terrain.get_ctrl_points().size() * sizeof(float) * 3;
-			glBufferData(GL_ARRAY_BUFFER, pos_array_size + ctrl_point_colors.size() * sizeof(float) * 3, NULL, GL_STATIC_DRAW);
+			int pos_array_size = terrain.get_ctrl_points().size() * sizeof(vec3);
+			glBufferData(GL_ARRAY_BUFFER, pos_array_size + ctrl_point_colors.size() * sizeof(vec3), NULL, GL_STATIC_DRAW);
 			glBufferSubData(GL_ARRAY_BUFFER, 0, pos_array_size, &terrain.get_ctrl_points()[0]);
-			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, ctrl_point_colors.size() * 3 * sizeof(float), &ctrl_point_colors[0]);
+			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, ctrl_point_colors.size() * sizeof(vec3), &ctrl_point_colors[0]);
 
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), 0);
-			glVertexAttribPointer(attribute_color, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)pos_array_size);
-			glEnableVertexAttribArray(attribute_pos);
-			glEnableVertexAttribArray(attribute_color);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
+			glVertexAttribPointer(attribute_color, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)pos_array_size);
 			glBindVertexArray(0);
 		}
 
@@ -138,10 +136,30 @@ namespace octet {
 			generate_terrain_mesh();
 		}
 
+		void object_init()
+		{
+			glGenVertexArrays(1, &vao_terrain);
+			glBindVertexArray(vao_terrain);
+			glEnableVertexAttribArray(attribute_pos);
+			glEnableVertexAttribArray(attribute_uv);
+			glEnableVertexAttribArray(attribute_normal);
+			glBindVertexArray(0);
+			glGenBuffers(1, &vbo_terrain);
+
+			glGenVertexArrays(1, &vao_ctrl_points);
+			glBindVertexArray(vao_ctrl_points);
+			glEnableVertexAttribArray(attribute_pos);
+			glEnableVertexAttribArray(attribute_color);
+			glBindVertexArray(0);
+			glGenBuffers(1, &vbo_ctrl_points);
+		}
+
     // this is called once OpenGL is initialized
     void app_init() 
     {
+			object_init();
 			sb.init("assets/sky_box.jpg");
+			water.init();
 			glPointSize(5.f);
 			reset_terrain();
 			
@@ -157,11 +175,10 @@ namespace octet {
 	    glEnable(GL_DEPTH_TEST);
 	    glEnable(GL_CULL_FACE);
 	    glCullFace(GL_BACK);
-	    /*
+	    ///*
 	    glEnable(GL_BLEND);
-	    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	    */
-	    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	    //*/
     }
 
 		void reset_ctrl_points()
@@ -247,6 +264,7 @@ namespace octet {
 			}
 			vertices.resize(resolution * resolution * 4);
 			uvs.resize(resolution * resolution * 4);
+			normals.resize(resolution * resolution * 4);
 			int index = 0;
 			float length = end - start;
 			float du = length / resolution, dv = length / resolution, u = start, v = start;
@@ -258,21 +276,25 @@ namespace octet {
 					terrain.get_surface_vertex(vertices[index], u, v);
 					uvs[index][0] = vertices[index][0];
 					uvs[index][1] = vertices[index][2];
+					normals[index] = vec3(0, 1, 0);
 					index++;
 
 					terrain.get_surface_vertex(vertices[index], u, v + dv);
 					uvs[index][0] = vertices[index][0];
 					uvs[index][1] = vertices[index][2];
+					normals[index] = vec3(0, 1, 0);
 					index++;
 
 					terrain.get_surface_vertex(vertices[index], u + du, v + dv);
 					uvs[index][0] = vertices[index][0];
 					uvs[index][1] = vertices[index][2];
+					normals[index] = vec3(0, 1, 0);
 					index++;
 
 					terrain.get_surface_vertex(vertices[index], u + du, v);
 					uvs[index][0] = vertices[index][0];
 					uvs[index][1] = vertices[index][2];
+					normals[index] = vec3(0, 1, 0);
 					index++;
 					u += du;
 				}
@@ -412,6 +434,11 @@ namespace octet {
 					key_cool_down = tick_count;
 					toggle_ctrl_points = !toggle_ctrl_points;
 				}
+				if(is_key_down('V'))
+				{
+					key_cool_down = tick_count;
+					water.toggle_draw_normal();
+				}
 				if(is_key_down('R'))
 				{
 					key_cool_down = tick_count;
@@ -451,7 +478,10 @@ namespace octet {
 		void draw_world(int x, int y, int w, int h) {
 			static DWORD lastFrameCount = 0;
 			static DWORD curFrameCount = 0;
+			static DWORD lastTickCount = GetTickCount();
 			DWORD tick_count = GetTickCount();
+			float frame_time = (tick_count - lastTickCount) / 1000.f;
+			lastTickCount = tick_count;
 			static DWORD aa = tick_count;
 			curFrameCount++;
 			int count = tick_count - aa;
@@ -490,6 +520,9 @@ namespace octet {
 			glBindVertexArray(vao_terrain);
 			glDrawArrays(GL_QUADS, 0, 4 * resolution * resolution);
 			glBindVertexArray(0);
+
+			water.update(frame_time);
+			water.render(modelToProjection, 0);
 
 			if(toggle_ctrl_points)
 			{

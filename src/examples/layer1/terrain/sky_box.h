@@ -99,15 +99,15 @@ namespace octet {
 
 			glGenBuffers(1, &vbo);
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			glBufferData(GL_ARRAY_BUFFER, 24 * 5 * sizeof(float), NULL, GL_STATIC_DRAW);
-			int pos_array_size = 24 * 3 * sizeof(float);
+			glBufferData(GL_ARRAY_BUFFER, 24 * (sizeof(vec3) + sizeof(vec2)), NULL, GL_STATIC_DRAW);
+			int pos_array_size = 24 * sizeof(vec3);
 			glBufferSubData(GL_ARRAY_BUFFER, 0, pos_array_size, &vertices[0]);
-			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, 24 * 2 * sizeof(float), &uvs[0]);
+			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, 24 * sizeof(vec2), &uvs[0]);
 
 			glEnableVertexAttribArray(attribute_pos);
 			glEnableVertexAttribArray(attribute_uv);
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), 0);
-			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), (void*)pos_array_size);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
+			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (void*)pos_array_size);
 			glBindVertexArray(0);
 		}
 

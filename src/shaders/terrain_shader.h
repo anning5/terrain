@@ -49,8 +49,8 @@ namespace octet {
 	      uniform vec3 light_dir;
 	      void main() {
 			  gl_FragColor = texture2D(sampler, uv_);
-				//gl_FragColor.xyz = gl_FragColor.xyz * clamp(dot(normalize(light_dir), normalize(normal_)), 0.f, 1.f);
-				gl_FragColor.w = gl_FragColor.w * clamp(dot(normalize(light_dir), normalize(normal_)), 0.f, 1.f);
+				gl_FragColor.xyz = gl_FragColor.xyz * clamp(dot(normalize(light_dir), normalize(normal_)), 0.f, 1.f);
+				//gl_FragColor.w = gl_FragColor.w * clamp(dot(normalize(light_dir), normalize(normal_)), 0.f, 1.f);
 	      }
       );
     

@@ -1,4 +1,11 @@
 namespace octet {
+	vec3 get_normal(const vec3 &p0, const vec3 &p1, const vec3 &p2)
+	{
+		vec3 a = p0 - p1;
+		vec3 b = p2 - p1;
+		return normalize(cross(a, b));
+	}
+
 	class water_surface
 	{
 		terrain_shader shader_;
@@ -84,13 +91,6 @@ namespace octet {
 			}
 		}
 
-		vec3 get_normal(const vec3 &p0, const vec3 &p1, const vec3 &p2)
-		{
-			vec3 a = p0 - p1;
-			vec3 b = p2 - p1;
-			return normalize(cross(a, b));
-		}
-
 		void update_wave(float t)
 		{
 			int index = 0;
@@ -98,7 +98,14 @@ namespace octet {
 			{
 				for(int j = 0; j < width; j++)
 				{
-					vertices[index][1] = sin(t * 1.f + j * .1f);
+					vertices[index++][1] = sin(t * 1.f + j * .1f);
+				}
+			}
+			index = 0;
+			for(int i = 0; i < width; i++)
+			{
+				for(int j = 0; j < width; j++)
+				{
 					int k = 0;
 					if(i > 0)
 					{
@@ -127,11 +134,8 @@ namespace octet {
 						}
 					}
 					normals[index] = normalize(normals[index] / (float)k);
-					if(draw_normal)
-					{
-						normal_vertices[index * 2] = vertices[index];
-						normal_vertices[index * 2 + 1] = vertices[index] + normals[index];
-					}
+					normal_vertices[index * 2] = vertices[index];
+					normal_vertices[index * 2 + 1] = vertices[index] + normals[index];
 					index++;
 				}
 			}

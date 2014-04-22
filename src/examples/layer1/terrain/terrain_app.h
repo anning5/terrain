@@ -49,15 +49,24 @@ namespace octet {
     GLuint vbo_ctrl_points;
     GLuint vao_terrain;
     GLuint vao_ctrl_points;
+		GLuint vao_normal;
+		GLuint vbo_normal;
+		GLuint ibo;
 
 		dynarray<vec3> ctrl_point_colors;
 		dynarray<vec3> vertices;
 		dynarray<vec3> normals;
 		dynarray<vec2> uvs;
+		dynarray<vec3> normal_vertices;
+		dynarray<vec3> normal_colors;
+		dynarray<unsigned int> indices;
     bool is_right_button_down;
     bool is_left_button_down;
     bool toggle_wireframe;
     bool toggle_ctrl_points;
+    bool reallocate_vertices;
+    bool reallocate_ctrl_points;
+    bool draw_normal;
 		static const int TERRAIN_WIDTH = 20;
 
   public:
@@ -76,7 +85,10 @@ namespace octet {
 			current_selected_ctrl_point(-1),
 			resolution(50),
 			ctrl_point_count(10),
-			degree(3)
+			degree(3),
+			reallocate_vertices(true),
+			reallocate_ctrl_points(true),
+			draw_normal(false)
 	  {
 		  cc.set_view_distance(3.f);
 		  //cc.rotate_h(45);
@@ -90,20 +102,39 @@ namespace octet {
 		void buffer_terrain_vertices()
 		{
 			glBindVertexArray(vao_terrain);
-
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_terrain);
 			int pos_array_size = vertices.size() * sizeof(vec3);
 			int uv_array_size = uvs.size() * sizeof(vec2);
 			int normal_array_size = normals.size() * sizeof(vec3);
-			glBufferData(GL_ARRAY_BUFFER, pos_array_size + uv_array_size + normal_array_size, NULL, GL_STATIC_DRAW);
+			if(reallocate_vertices)
+			{
+				glBufferData(GL_ARRAY_BUFFER, pos_array_size + uv_array_size + normal_array_size, NULL, GL_STATIC_DRAW);
+				glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
+				glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (void*)(vertices.size() * sizeof(vec3)));
+				glVertexAttribPointer(attribute_normal, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(vertices.size() * sizeof(vec3) + uvs.size() * sizeof(vec2)));
+			}
 			glBufferSubData(GL_ARRAY_BUFFER, 0, pos_array_size, &vertices[0]);
 			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, uv_array_size, &uvs[0]);
 			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size + uv_array_size, normal_array_size, &normals[0]);
-
-			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
-			glVertexAttribPointer(attribute_uv, 2, GL_FLOAT, GL_FALSE, sizeof(vec2), (void*)pos_array_size);
-			glVertexAttribPointer(attribute_normal, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(pos_array_size + uv_array_size));
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+			if(reallocate_vertices)
+			{
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
+			}
 			glBindVertexArray(0);
+
+			glBindVertexArray(vao_normal);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo_normal);
+			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
+			glVertexAttribPointer(attribute_color, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(normal_vertices.size() * sizeof(vec3)));
+			if(reallocate_vertices)
+			{
+				glBufferData(GL_ARRAY_BUFFER, normal_vertices.size() * sizeof(vec3) + normal_colors.size() * sizeof(vec3), NULL, GL_STATIC_DRAW);
+				glBufferSubData(GL_ARRAY_BUFFER, normal_vertices.size() * sizeof(vec3), normal_colors.size() * sizeof(vec3), &normal_colors[0]);
+			}
+			glBufferSubData(GL_ARRAY_BUFFER, 0, normal_vertices.size() * sizeof(vec3), &normal_vertices[0]);
+			glBindVertexArray(0);
+			reallocate_vertices = false;
 		}
 
 		void buffer_ctrl_points_vertices()
@@ -112,13 +143,17 @@ namespace octet {
 
 			glBindBuffer(GL_ARRAY_BUFFER, vbo_ctrl_points);
 			int pos_array_size = terrain.get_ctrl_points().size() * sizeof(vec3);
-			glBufferData(GL_ARRAY_BUFFER, pos_array_size + ctrl_point_colors.size() * sizeof(vec3), NULL, GL_STATIC_DRAW);
+			if(reallocate_ctrl_points)
+			{
+				glBufferData(GL_ARRAY_BUFFER, pos_array_size + ctrl_point_colors.size() * sizeof(vec3), NULL, GL_STATIC_DRAW);
+			}
 			glBufferSubData(GL_ARRAY_BUFFER, 0, pos_array_size, &terrain.get_ctrl_points()[0]);
 			glBufferSubData(GL_ARRAY_BUFFER, pos_array_size, ctrl_point_colors.size() * sizeof(vec3), &ctrl_point_colors[0]);
 
 			glVertexAttribPointer(attribute_pos, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), 0);
 			glVertexAttribPointer(attribute_color, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)pos_array_size);
 			glBindVertexArray(0);
+			reallocate_ctrl_points = false;
 		}
 
 		void reset_terrain()
@@ -143,15 +178,23 @@ namespace octet {
 			glEnableVertexAttribArray(attribute_pos);
 			glEnableVertexAttribArray(attribute_uv);
 			glEnableVertexAttribArray(attribute_normal);
-			glBindVertexArray(0);
 			glGenBuffers(1, &vbo_terrain);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo_terrain);
+			glGenBuffers(1, &ibo);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+
+			glGenVertexArrays(1, &vao_normal);
+			glBindVertexArray(vao_normal);
+			glGenBuffers(1, &vbo_normal);
+			glEnableVertexAttribArray(attribute_pos);
+			glEnableVertexAttribArray(attribute_color);
 
 			glGenVertexArrays(1, &vao_ctrl_points);
 			glBindVertexArray(vao_ctrl_points);
 			glEnableVertexAttribArray(attribute_pos);
 			glEnableVertexAttribArray(attribute_color);
-			glBindVertexArray(0);
 			glGenBuffers(1, &vbo_ctrl_points);
+			glBindVertexArray(0);
 		}
 
     // this is called once OpenGL is initialized
@@ -262,43 +305,84 @@ namespace octet {
 			{
 				return;
 			}
-			vertices.resize(resolution * resolution * 4);
-			uvs.resize(resolution * resolution * 4);
-			normals.resize(resolution * resolution * 4);
+			int width = resolution + 1;
+			int count = width * width;
+			vertices.resize(count);
+			uvs.resize(count);
+			normals.resize(count);
+			indices.resize(resolution * resolution * 4);
+			normal_vertices.resize(count * 2);
+			normal_colors.resize(count * 2);
+			for(unsigned int i = 0; i < normal_colors.size(); i++)
+			{
+				normal_colors[i] = vec3(1, 0, 0);
+			}
 			int index = 0;
 			float length = end - start;
 			float du = length / resolution, dv = length / resolution, u = start, v = start;
-			for(int i = 0; i < resolution; i++)
+			for(int i = 0; i < width; i++)
 			{
 				u = start;
-				for(int j = 0; j < resolution; j++)
+				for(int j = 0; j < width; j++)
 				{
 					terrain.get_surface_vertex(vertices[index], u, v);
 					uvs[index][0] = vertices[index][0];
 					uvs[index][1] = vertices[index][2];
-					normals[index] = vec3(0, 1, 0);
-					index++;
-
-					terrain.get_surface_vertex(vertices[index], u, v + dv);
-					uvs[index][0] = vertices[index][0];
-					uvs[index][1] = vertices[index][2];
-					normals[index] = vec3(0, 1, 0);
-					index++;
-
-					terrain.get_surface_vertex(vertices[index], u + du, v + dv);
-					uvs[index][0] = vertices[index][0];
-					uvs[index][1] = vertices[index][2];
-					normals[index] = vec3(0, 1, 0);
-					index++;
-
-					terrain.get_surface_vertex(vertices[index], u + du, v);
-					uvs[index][0] = vertices[index][0];
-					uvs[index][1] = vertices[index][2];
-					normals[index] = vec3(0, 1, 0);
-					index++;
 					u += du;
+					index++;
 				}
 				v += dv;
+			}
+			index = 0;
+			for(int i = 0; i < width; i++)
+			{
+				for(int j = 0; j < width; j++)
+				{
+					int k = 0;
+					if(i > 0)
+					{
+						if(j > 0)
+						{
+							k++;
+							normals[index] += get_normal(vertices[index - width], vertices[index], vertices[index - 1]);
+						}
+						if(j < resolution)
+						{
+							k++;
+							normals[index] += get_normal(vertices[index + 1], vertices[index], vertices[index - width]);
+						}
+					}
+					if(i < resolution)
+					{
+						if(j > 0)
+						{
+							k++;
+							normals[index] += get_normal(vertices[index - 1], vertices[index], vertices[index + width]);
+						}
+						if(j < resolution)
+						{
+							k++;
+							normals[index] += get_normal(vertices[index + width], vertices[index], vertices[index + 1]);
+						}
+					}
+					normals[index] = normalize(normals[index] / (float)k);
+					normal_vertices[index * 2] = vertices[index];
+					normal_vertices[index * 2 + 1] = vertices[index] + normals[index];
+					index++;
+				}
+			}
+			index = 0;
+			int index1 = 0;
+			for(int i = 0; i < resolution; i++)
+			{
+				for(int j = 0; j < resolution; j++)
+				{
+					indices[index++] = index1 + j;
+					indices[index++] = index1 + width + j;
+					indices[index++] = index1 + width + j + 1;
+					indices[index++] = index1 + j + 1;
+				}
+				index1 += width;
 			}
 			buffer_terrain_vertices();
 		}
@@ -439,6 +523,11 @@ namespace octet {
 					key_cool_down = tick_count;
 					water.toggle_draw_normal();
 				}
+				if(is_key_down('B'))
+				{
+					key_cool_down = tick_count;
+					draw_normal = !draw_normal;
+				}
 				if(is_key_down('R'))
 				{
 					key_cool_down = tick_count;
@@ -453,6 +542,7 @@ namespace octet {
 					{
 						resolution++;
 					}
+					reallocate_vertices = true;
 					generate_terrain_mesh();
 				}
 				if(is_key_down('F'))
@@ -469,6 +559,7 @@ namespace octet {
 					{
 						ctrl_point_count++;
 					}
+					reallocate_ctrl_points = true;
 					reset_terrain();
 				}
 			}
@@ -518,11 +609,20 @@ namespace octet {
 			glBindTexture(GL_TEXTURE_2D, texture);
 
 			glBindVertexArray(vao_terrain);
-			glDrawArrays(GL_QUADS, 0, 4 * resolution * resolution);
+			glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+			if(draw_normal)
+			{
+				glBindVertexArray(vao_normal);
+				vertex_color_shader_.render(modelToProjection);
+				glDrawArrays(GL_LINES, 0, normal_vertices.size());
+			}
 			glBindVertexArray(0);
 
+			//*
 			water.update(frame_time);
 			water.render(modelToProjection, 0);
+			//*/
 
 			if(toggle_ctrl_points)
 			{

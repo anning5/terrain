@@ -201,8 +201,8 @@ namespace octet {
     void app_init() 
     {
 			object_init();
-			sb.init("assets/sky_box.jpg");
-			water.init();
+			//sb.init("assets/sky_box.jpg");
+			water.init(vec3(10.f, .2f, 10.f));
 			glPointSize(5.f);
 			reset_terrain();
 			
@@ -217,6 +217,7 @@ namespace octet {
 
 	    glEnable(GL_DEPTH_TEST);
 	    glEnable(GL_CULL_FACE);
+	    //glDisable(GL_CULL_FACE);
 	    glCullFace(GL_BACK);
 	    ///*
 	    glEnable(GL_BLEND);
@@ -602,7 +603,7 @@ namespace octet {
 			//modelToWorld.rotateZ(.01);
 
 			// set up opengl to draw flat shaded triangles of a fixed color
-			sb.render(modelToProjection, 0);
+			//sb.render(modelToProjection, 0);
 			shader_.render(modelToProjection, 0);
 
 			glActiveTexture(GL_TEXTURE0);

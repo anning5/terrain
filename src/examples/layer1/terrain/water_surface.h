@@ -17,6 +17,16 @@ namespace octet {
 		dynarray<vec3> normal_vertices;
 		dynarray<vec3> normal_colors;
 		dynarray<unsigned int> indices;
+
+		dynarray<vec2> directions;
+		dynarray<float> Qs;
+		dynarray<float> Amplitudes;
+		dynarray<float> QAs; // = Q * Amplitude
+		dynarray<float> wave_lengths;// L
+		dynarray<float> ws; // w = 2 * PI / L
+		dynarray<float> wave_speeds; // S
+		dynarray<float> ps; // phase-constant = S * 2 * PI / L
+
 		GLuint texture;
 		GLuint vao;
 		GLuint vbo;
@@ -68,10 +78,8 @@ namespace octet {
 			int index = 0;
 			for(int i = 0; i < width; i++)
 			{
-				float span_z = i * span;
 				for(int j = 0; j < width; j++)
 				{
-					vertices[index] = vec3(j * span, 0, span_z);
 					uvs[index] = vec2(1, 1);
 					normals[index++] = vec3(0, 1, 0);
 				}
@@ -94,12 +102,30 @@ namespace octet {
 		void update_wave(float t)
 		{
 			int index = 0;
+			float half_length = (width - 1) * span / 2;
+			float z = -half_length;
 			for(int i = 0; i < width; i++)
 			{
+				float x = -half_length;
 				for(int j = 0; j < width; j++)
 				{
-					vertices[index++][1] = sin(t * 1.f + j * .1f);
+					//vertices[index][1] = sin(t * 1.f + j * .1f);
+					vec3 &v = vertices[index++];
+					float sum_x = 0, sum_y = 0, sum_z = 0;
+					for(unsigned int k = 0; k < directions.size(); k++)
+					{
+						float value = ws[k] * dot(directions[k], vec2(x, z)) + ps[k] * t;
+						float cos_value = cos(value);
+						sum_x += QAs[k] * directions[k][0] * cos_value;
+						sum_z += QAs[k] * directions[k][1] * cos_value;
+						sum_y += Amplitudes[k] * sin(value);
+					}
+					v[0] = x + sum_x;
+					v[2] = z + sum_z;
+					v[1] = sum_y;
+					x += span;
 				}
+				z += span;
 			}
 			index = 0;
 			for(int i = 0; i < width; i++)
@@ -158,15 +184,51 @@ namespace octet {
 			}
 		}
 
-		void init()
+		void wave_parameters_init()
 		{
+			directions.push_back(normalize(vec2(0, 1.f)));
+			Qs.push_back(.5f);
+			Amplitudes.push_back(.05f);
+			wave_lengths.push_back(2);
+			wave_speeds.push_back(2);
+
+			directions.push_back(normalize(vec2(1.f, 0)));
+			Qs.push_back(.5f);
+			Amplitudes.push_back(.05f);
+			wave_lengths.push_back(2);
+			wave_speeds.push_back(2);
+
+			directions.push_back(normalize(vec2(1.f, 1.f)));
+			Qs.push_back(.5f);
+			Amplitudes.push_back(.05f);
+			wave_lengths.push_back(2);
+			wave_speeds.push_back(2);
+
+			directions.push_back(normalize(vec2(-1.f, 1.f)));
+			Qs.push_back(.5f);
+			Amplitudes.push_back(.05f);
+			wave_lengths.push_back(2);
+			wave_speeds.push_back(2);
+
+			for(unsigned int i = 0; i < Amplitudes.size(); i++)
+			{
+				QAs.push_back(Amplitudes[i] * Qs[i]);
+				ws.push_back(2 * 3.14159265f / wave_lengths[i]);
+				ps.push_back(wave_speeds[i] * ws[i]);
+			}
+		}
+
+		void init(const vec3 &v)
+		{
+			set_position(v);
+			wave_parameters_init();
 			t = 0;
 			last_update_time = 0;
 			shader_.init();
 			vertex_color_shader_.init();
 			generate_water_surface();
 
-      texture = resources::get_texture_handle(GL_RGBA, "#00ffff7f");
+      texture = resources::get_texture_handle(GL_RGBA, "#7fffff3f");
 			glGenVertexArrays(1, &vao_normal);
 			glBindVertexArray(vao_normal);
 			glGenBuffers(1, &vbo_normal);
@@ -179,7 +241,7 @@ namespace octet {
 			glVertexAttribPointer(attribute_color, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)(normal_vertices.size() * sizeof(vec3)));
 			glBindVertexArray(0);
 
-			
+
 			glGenVertexArrays(1, &vao);
 			glBindVertexArray(vao);
 
@@ -209,7 +271,8 @@ namespace octet {
 
 		void render(const mat4t &modelToProjection, int sampler)
 		{
-			shader_.render(modelToProjection, sampler);
+			mat4t m = modelToWorld * modelToProjection;
+			shader_.render(m, sampler);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texture);
 			glBindVertexArray(vao);
@@ -217,7 +280,7 @@ namespace octet {
 			if(draw_normal)
 			{
 				glBindVertexArray(vao_normal);
-				vertex_color_shader_.render(modelToProjection);
+				vertex_color_shader_.render(m);
 				glDrawArrays(GL_LINES, 0, normal_vertices.size());
 			}
 			glBindVertexArray(0);

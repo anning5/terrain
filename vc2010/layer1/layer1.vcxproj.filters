@@ -220,6 +220,9 @@
     <ClInclude Include="..\..\src\examples\layer1\terrain\water_surface.h">
       <Filter>terrain</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\shaders\water_shader.h">
+      <Filter>octet\shaders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\resources\mesh_builder.inl">

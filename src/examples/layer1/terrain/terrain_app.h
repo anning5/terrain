@@ -25,13 +25,15 @@ namespace octet {
     // Matrix to transform points on our triangle to the world space
     // This allows us to move and rotate our triangle
     mat4t modelToWorld;
-		mat4t modelToProjection;
+		mat4t worldToProjection;
+		mat4t reflective_worldToProjection;
 
     // Matrix to transform points in our camera space to the world.
     // This lets us move our camera
     camera_control cc;
-    terrain_shader shader_;
-    vertex_color_shader vertex_color_shader_;
+    camera_control cc_reflection;
+    terrain_shader terrain_shader_;
+    vertex_color_shader vertex_color_terrain_shader_;
 		nurbs_surface terrain;
 		water_surface water;
 		sky_box sb;
@@ -43,6 +45,7 @@ namespace octet {
 		int resolution;
 		int ctrl_point_count;
 		int degree;
+		float water_height;
 		unsigned int current_selected_ctrl_point;
     GLuint texture;
     GLuint vbo_terrain;
@@ -52,6 +55,9 @@ namespace octet {
 		GLuint vao_normal;
 		GLuint vbo_normal;
 		GLuint ibo;
+		GLuint frame_buffer;
+		GLuint frame_texture;
+		GLuint depth_render_buffer;
 
 		dynarray<vec3> ctrl_point_colors;
 		dynarray<vec3> vertices;
@@ -88,14 +94,19 @@ namespace octet {
 			degree(3),
 			reallocate_vertices(true),
 			reallocate_ctrl_points(true),
-			draw_normal(false)
+			draw_normal(false),
+			water_height(.2f)
 	  {
-		  cc.set_view_distance(3.f);
-		  //cc.rotate_h(45);
-		  cc.rotate_v(-25);
+			const float DIS = 3.f, ANGLE_V = 25.f;
+		  cc.set_view_distance(DIS);
+		  cc_reflection.set_view_distance(DIS);
+		  cc.rotate_v(-ANGLE_V);
+		  cc_reflection.rotate_v(ANGLE_V);
 			float span = (float)TERRAIN_WIDTH / ctrl_point_count;
 			float offset = (TERRAIN_WIDTH - span) * .5f;
-		  cc.set_view_position(vec3(offset, 0, offset));
+			vec3 pos(offset, water_height, offset);
+		  cc.set_view_position(pos);
+		  cc_reflection.set_view_position(pos);
 		  mouse_wheel = get_mouse_wheel();
 	  }
 
@@ -201,15 +212,16 @@ namespace octet {
     void app_init() 
     {
 			object_init();
-			//sb.init("assets/sky_box.jpg");
-			water.init(vec3(10.f, .2f, 10.f));
+			sb.init("assets/sky_box.jpg");
+			generate_frame_buffer();
+			water.init(vec3(10.f, water_height, 10.f), frame_texture);
 			glPointSize(5.f);
 			reset_terrain();
 			
       texture = resources::get_texture_handle(GL_RGB, "assets/terrain.jpg");
 	    // initialize the shader
-	    shader_.init();
-	    vertex_color_shader_.init();
+	    terrain_shader_.init();
+	    vertex_color_terrain_shader_.init();
 
 	    // put the triangle at the center of the world
 	    modelToWorld.loadIdentity();
@@ -293,10 +305,36 @@ namespace octet {
 
 		void draw_ctrl_points()
 		{
-			vertex_color_shader_.render(modelToProjection);
+			vertex_color_terrain_shader_.render(worldToProjection);
 			glBindVertexArray(vao_ctrl_points);
 			glDrawArrays(GL_POINTS, 0, terrain.get_ctrl_points().size());
 			glBindVertexArray(0);
+		}
+
+		void generate_frame_buffer()
+		{
+			int w, h;
+			get_viewport_size(w, h);
+			glGenFramebuffers(1, &frame_buffer);
+			glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer);
+			
+			glGenTextures(1, &frame_texture);
+			glBindTexture(GL_TEXTURE_2D, frame_texture);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			//glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE); // automatic mipmap
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_BYTE, 0);
+			
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frame_texture, 0); 
+			
+			glGenRenderbuffers(1, &depth_render_buffer);
+			glBindRenderbuffer(GL_RENDERBUFFER, depth_render_buffer);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_render_buffer);
+			GLenum res = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+			assert(res == GL_FRAMEBUFFER_COMPLETE);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 
 		void generate_terrain_mesh()
@@ -335,22 +373,26 @@ namespace octet {
 				v += dv;
 			}
 			index = 0;
+			vec3 sum;
 			for(int i = 0; i < width; i++)
 			{
 				for(int j = 0; j < width; j++)
 				{
+					sum[0] = 0;
+					sum[1] = 0;
+					sum[2] = 0;
 					int k = 0;
 					if(i > 0)
 					{
 						if(j > 0)
 						{
 							k++;
-							normals[index] += get_normal(vertices[index - width], vertices[index], vertices[index - 1]);
+							sum += get_normal(vertices[index - width], vertices[index], vertices[index - 1]);
 						}
 						if(j < resolution)
 						{
 							k++;
-							normals[index] += get_normal(vertices[index + 1], vertices[index], vertices[index - width]);
+							sum += get_normal(vertices[index + 1], vertices[index], vertices[index - width]);
 						}
 					}
 					if(i < resolution)
@@ -358,15 +400,16 @@ namespace octet {
 						if(j > 0)
 						{
 							k++;
-							normals[index] += get_normal(vertices[index - 1], vertices[index], vertices[index + width]);
+							sum += get_normal(vertices[index - 1], vertices[index], vertices[index + width]);
 						}
 						if(j < resolution)
 						{
 							k++;
-							normals[index] += get_normal(vertices[index + width], vertices[index], vertices[index + 1]);
+							sum += get_normal(vertices[index + width], vertices[index], vertices[index + 1]);
 						}
 					}
-					normals[index] = normalize(normals[index] / (float)k);
+					normals[index] = normalize(sum / (float)k);
+					normals[index] = vec3(0, 1, 0);
 					normal_vertices[index * 2] = vertices[index];
 					normal_vertices[index * 2 + 1] = vertices[index] + normals[index];
 					index++;
@@ -463,9 +506,17 @@ namespace octet {
 				short sx = x, sy = y;
 				int delta_x = mouse_x - sx, delta_y = mouse_y - sy;
 				if(delta_x != 0)
-					cc.rotate_h((float)delta_x * factor);
+				{
+					float f = delta_x * factor;
+					cc.rotate_h(f);
+					cc_reflection.rotate_h(f);
+				}
 				if(delta_y != 0)
-					cc.rotate_v((float)delta_y * factor);
+				{
+					float f = delta_y * factor;
+					cc.rotate_v(f);
+					cc_reflection.rotate_v(-f);
+				}
 				mouse_x = sx;
 				mouse_y = sy;
 			}
@@ -474,17 +525,21 @@ namespace octet {
 			if(mouse_wheel_delta != 0)
 			{
 				static float factor1 = .1f;
-				cc.add_view_distance(mouse_wheel_delta / WHEEL_DELTA * factor1);
+				float f = mouse_wheel_delta / WHEEL_DELTA * factor1;
+				cc.add_view_distance(f);
+				cc_reflection.add_view_distance(f);
 				mouse_wheel = get_mouse_wheel();
 			}
 			static float factor2 = .005f;
 			if(is_key_down('S'))
 			{
 				cc.add_view_distance(factor2);
+				cc_reflection.add_view_distance(factor2);
 			}
 			if(is_key_down('W'))
 			{
 				cc.add_view_distance(-factor2);
+				cc_reflection.add_view_distance(-factor2);
 			}
 
 			static float factor3 = .01f;
@@ -566,6 +621,16 @@ namespace octet {
 			}
 		}
 
+		void draw_terrain(const mat4t &m)
+		{
+			terrain_shader_.render(m, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glBindVertexArray(vao_terrain);
+			glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+		}
+
 		// this is called to draw the world
 		void draw_world(int x, int y, int w, int h) {
 			static DWORD lastFrameCount = 0;
@@ -597,32 +662,35 @@ namespace octet {
 
 			// build a projection matrix: model -> world -> camera -> projection
 			// the projection space is the cube -1 <= x/w, y/w, z/w <= 1
-			modelToProjection = mat4t::build_projection_matrix(modelToWorld, cc.get_matrix());
+			worldToProjection = mat4t::build_projection_matrix(modelToWorld, cc.get_matrix());
 
 			// spin the triangle by rotating about Z (the view direction)
 			//modelToWorld.rotateZ(.01);
 
 			// set up opengl to draw flat shaded triangles of a fixed color
-			//sb.render(modelToProjection, 0);
-			shader_.render(modelToProjection, 0);
+			sb.render(worldToProjection, 0);
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture);
-
-			glBindVertexArray(vao_terrain);
-			glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
-			glBindVertexArray(0);
+			draw_terrain(worldToProjection);
 			if(draw_normal)
 			{
 				glBindVertexArray(vao_normal);
-				vertex_color_shader_.render(modelToProjection);
+				vertex_color_terrain_shader_.render(worldToProjection);
 				glDrawArrays(GL_LINES, 0, normal_vertices.size());
+				glBindVertexArray(0);
 			}
-			glBindVertexArray(0);
 
 			//*
 			water.update(frame_time);
-			water.render(modelToProjection, 0);
+			//render water reflection
+			glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer);
+			reflective_worldToProjection = mat4t::build_projection_matrix(modelToWorld, cc_reflection.get_matrix());
+			glClearColor(0, 0, 0, 1);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			draw_terrain(reflective_worldToProjection);
+			sb.render(reflective_worldToProjection, 0);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			//
+			water.render(worldToProjection, 0);
 			//*/
 
 			if(toggle_ctrl_points)

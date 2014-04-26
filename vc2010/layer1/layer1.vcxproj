@@ -70,6 +70,7 @@
     <ClInclude Include="..\..\src\shaders\texture_normal_shader.h" />
     <ClInclude Include="..\..\src\shaders\texture_shader.h" />
     <ClInclude Include="..\..\src\shaders\terrain_shader.h" />
+    <ClInclude Include="..\..\src\shaders\water_shader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\resources\mesh_builder.inl" />

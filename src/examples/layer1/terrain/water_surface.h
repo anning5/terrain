@@ -8,7 +8,7 @@ namespace octet {
 
 	class water_surface
 	{
-		terrain_shader shader_;
+		water_shader water_shader_;
 		vertex_color_shader vertex_color_shader_;
 		mat4t modelToWorld;
 		dynarray<vec3> vertices;
@@ -32,6 +32,9 @@ namespace octet {
 		GLuint vbo;
 		GLuint vao_normal;
 		GLuint vbo_normal;
+		GLuint frame_buffer;
+		GLuint scene_texture;
+		GLuint depth_render_buffer;
 		GLuint ibo;
 		int width;
 		float t;
@@ -45,7 +48,8 @@ namespace octet {
 			span(.1f),
 			last_update_time(0),
 			draw_normal(false)
-		{}
+		{
+		}
 
 		void set_position(const vec3 &pos)
 		{
@@ -74,15 +78,18 @@ namespace octet {
 				normal_colors[i] = vec3(1, 0, 0);
 			}
 
+			float du = 1.f / (width - 1), v = 0, dv = du;
 
 			int index = 0;
 			for(int i = 0; i < width; i++)
 			{
+				float u = 0;
 				for(int j = 0; j < width; j++)
 				{
-					uvs[index] = vec2(1, 1);
-					normals[index++] = vec3(0, 1, 0);
+					uvs[index++] = vec2(u, v);
+					u += du;
 				}
+				v += dv;
 			}
 			index = 0;
 			int index1 = 0;
@@ -128,22 +135,26 @@ namespace octet {
 				z += span;
 			}
 			index = 0;
+			vec3 sum;
 			for(int i = 0; i < width; i++)
 			{
 				for(int j = 0; j < width; j++)
 				{
+					sum[0] = 0;
+					sum[1] = 0;
+					sum[2] = 0;
 					int k = 0;
 					if(i > 0)
 					{
 						if(j > 0)
 						{
 							k++;
-							normals[index] += get_normal(vertices[index - width], vertices[index], vertices[index - 1]);
+							sum += get_normal(vertices[index - width], vertices[index], vertices[index - 1]);
 						}
 						if(j < width - 1)
 						{
 							k++;
-							normals[index] += get_normal(vertices[index + 1], vertices[index], vertices[index - width]);
+							sum += get_normal(vertices[index + 1], vertices[index], vertices[index - width]);
 						}
 					}
 					if(i < width - 1)
@@ -151,15 +162,15 @@ namespace octet {
 						if(j > 0)
 						{
 							k++;
-							normals[index] += get_normal(vertices[index - 1], vertices[index], vertices[index + width]);
+							sum += get_normal(vertices[index - 1], vertices[index], vertices[index + width]);
 						}
 						if(j < width - 1)
 						{
 							k++;
-							normals[index] += get_normal(vertices[index + width], vertices[index], vertices[index + 1]);
+							sum += get_normal(vertices[index + width], vertices[index], vertices[index + 1]);
 						}
 					}
-					normals[index] = normalize(normals[index] / (float)k);
+					normals[index] = normalize(sum / (float)k);
 					normal_vertices[index * 2] = vertices[index];
 					normal_vertices[index * 2 + 1] = vertices[index] + normals[index];
 					index++;
@@ -187,26 +198,26 @@ namespace octet {
 		void wave_parameters_init()
 		{
 			directions.push_back(normalize(vec2(0, 1.f)));
-			Qs.push_back(.5f);
-			Amplitudes.push_back(.05f);
+			Qs.push_back(.8f);
+			Amplitudes.push_back(.02f);
 			wave_lengths.push_back(2);
 			wave_speeds.push_back(2);
 
 			directions.push_back(normalize(vec2(1.f, 0)));
-			Qs.push_back(.5f);
-			Amplitudes.push_back(.05f);
+			Qs.push_back(.8f);
+			Amplitudes.push_back(.02f);
 			wave_lengths.push_back(2);
 			wave_speeds.push_back(2);
 
 			directions.push_back(normalize(vec2(1.f, 1.f)));
-			Qs.push_back(.5f);
-			Amplitudes.push_back(.05f);
+			Qs.push_back(.8f);
+			Amplitudes.push_back(.02f);
 			wave_lengths.push_back(2);
 			wave_speeds.push_back(2);
 
 			directions.push_back(normalize(vec2(-1.f, 1.f)));
-			Qs.push_back(.5f);
-			Amplitudes.push_back(.05f);
+			Qs.push_back(.8f);
+			Amplitudes.push_back(.02f);
 			wave_lengths.push_back(2);
 			wave_speeds.push_back(2);
 
@@ -218,17 +229,18 @@ namespace octet {
 			}
 		}
 
-		void init(const vec3 &v)
+		void init(const vec3 &v, GLuint scene_texture)
 		{
+			this->scene_texture = scene_texture;
 			set_position(v);
 			wave_parameters_init();
 			t = 0;
 			last_update_time = 0;
-			shader_.init();
+			water_shader_.init();
 			vertex_color_shader_.init();
 			generate_water_surface();
 
-      texture = resources::get_texture_handle(GL_RGBA, "#7fffff3f");
+      texture = resources::get_texture_handle(GL_RGBA, "#7fffff4f");
 			glGenVertexArrays(1, &vao_normal);
 			glBindVertexArray(vao_normal);
 			glGenBuffers(1, &vbo_normal);
@@ -269,12 +281,14 @@ namespace octet {
 			glBindVertexArray(0);
 		}
 
-		void render(const mat4t &modelToProjection, int sampler)
+		void render(const mat4t &worldToProjection, int sampler)
 		{
-			mat4t m = modelToWorld * modelToProjection;
-			shader_.render(m, sampler);
+			mat4t m = modelToWorld * worldToProjection;
+			water_shader_.render(m, sampler);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texture);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, scene_texture);
 			glBindVertexArray(vao);
 			glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
 			if(draw_normal)

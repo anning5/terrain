@@ -142,6 +142,7 @@ static char *get_sprintf_buffer() {
 #include "../shaders/bump_shader.h"
 #include "../shaders/terrain_shader.h"
 #include "../shaders/water_shader.h"
+#include "../shaders/cubemap_shader.h"
 
 //#include "../physics/physics.h"
 

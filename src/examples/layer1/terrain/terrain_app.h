@@ -31,12 +31,11 @@ namespace octet {
     // Matrix to transform points in our camera space to the world.
     // This lets us move our camera
     camera_control cc;
-    camera_control cc_reflection;
     terrain_shader terrain_shader_;
     vertex_color_shader vertex_color_terrain_shader_;
 		nurbs_surface terrain;
-		water_surface water;
 		sky_box sb;
+		water_surface water;
 
     int mouse_x;
     int mouse_y;
@@ -95,18 +94,18 @@ namespace octet {
 			reallocate_vertices(true),
 			reallocate_ctrl_points(true),
 			draw_normal(false),
-			water_height(.2f)
+			water_height(-.2f),
+			sb(sky_box::get_sky_box()),
+			water(sb)
 	  {
 			const float DIS = 3.f, ANGLE_V = 25.f;
 		  cc.set_view_distance(DIS);
-		  cc_reflection.set_view_distance(DIS);
 		  cc.rotate_v(-ANGLE_V);
-		  cc_reflection.rotate_v(ANGLE_V);
 			float span = (float)TERRAIN_WIDTH / ctrl_point_count;
 			float offset = (TERRAIN_WIDTH - span) * .5f;
 			vec3 pos(offset, water_height, offset);
 		  cc.set_view_position(pos);
-		  cc_reflection.set_view_position(pos);
+		  //cc.set_view_position(vec3(0, 0, 0));
 		  mouse_wheel = get_mouse_wheel();
 	  }
 
@@ -212,9 +211,12 @@ namespace octet {
     void app_init() 
     {
 			object_init();
-			sb.init("assets/sky_box.jpg");
+			sb.init();
 			generate_frame_buffer();
-			water.init(vec3(10.f, water_height, 10.f), frame_texture);
+			float span = (float)TERRAIN_WIDTH / ctrl_point_count;
+			float offset = (TERRAIN_WIDTH - span) * .5f;
+			water.init(vec3(offset, water_height, offset), TERRAIN_WIDTH - 3 * span, frame_texture);
+			//water.set_position(vec3(0, 0, 0));
 			glPointSize(5.f);
 			reset_terrain();
 			
@@ -409,7 +411,6 @@ namespace octet {
 						}
 					}
 					normals[index] = normalize(sum / (float)k);
-					normals[index] = vec3(0, 1, 0);
 					normal_vertices[index * 2] = vertices[index];
 					normal_vertices[index * 2 + 1] = vertices[index] + normals[index];
 					index++;
@@ -509,13 +510,11 @@ namespace octet {
 				{
 					float f = delta_x * factor;
 					cc.rotate_h(f);
-					cc_reflection.rotate_h(f);
 				}
 				if(delta_y != 0)
 				{
 					float f = delta_y * factor;
 					cc.rotate_v(f);
-					cc_reflection.rotate_v(-f);
 				}
 				mouse_x = sx;
 				mouse_y = sy;
@@ -527,19 +526,16 @@ namespace octet {
 				static float factor1 = .1f;
 				float f = mouse_wheel_delta / WHEEL_DELTA * factor1;
 				cc.add_view_distance(f);
-				cc_reflection.add_view_distance(f);
 				mouse_wheel = get_mouse_wheel();
 			}
 			static float factor2 = .005f;
 			if(is_key_down('S'))
 			{
 				cc.add_view_distance(factor2);
-				cc_reflection.add_view_distance(factor2);
 			}
 			if(is_key_down('W'))
 			{
 				cc.add_view_distance(-factor2);
-				cc_reflection.add_view_distance(-factor2);
 			}
 
 			static float factor3 = .01f;
@@ -681,16 +677,7 @@ namespace octet {
 
 			//*
 			water.update(frame_time);
-			//render water reflection
-			glBindFramebuffer(GL_FRAMEBUFFER, frame_buffer);
-			reflective_worldToProjection = mat4t::build_projection_matrix(modelToWorld, cc_reflection.get_matrix());
-			glClearColor(0, 0, 0, 1);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			draw_terrain(reflective_worldToProjection);
-			sb.render(reflective_worldToProjection, 0);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			//
-			water.render(worldToProjection, 0);
+			water.render(worldToProjection, (vec3 &)cc.get_matrix()[3]);
 			//*/
 
 			if(toggle_ctrl_points)

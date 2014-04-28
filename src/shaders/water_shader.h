@@ -14,9 +14,10 @@ namespace octet {
 
     // index for model space to projection space matrix
     GLuint modelToProjectionIndex_;
-    GLuint samplerIndex_;
-    GLuint sky_sampler;
+    GLuint sampler_;
+    GLuint cube_sampler_;
     GLuint light_dir_;
+    GLuint camera_;
 
     // index for flat shader emissive color
   public:
@@ -30,15 +31,14 @@ namespace octet {
         attribute vec3 normal;
         uniform mat4 modelToProjection;
 				varying vec2 uv_;
+				varying vec3 srt_;
 				varying vec3 normal_;
 				varying vec3 pos_;
-				varying vec4 uv_reflection;
 				void main() {
 					gl_Position = modelToProjection * pos;
-					uv_ = uv;
 					normal_ = normal;
 					pos_ = pos.xyz;
-					uv_reflection = gl_Position;
+					uv_ = uv;
 				}
       );
 
@@ -46,15 +46,45 @@ namespace octet {
       // in the rasterized triangles.
       const char fragment_shader[] = SHADER_STR(
 	      varying vec2 uv_;
-				varying vec4 uv_reflection;
+	      varying vec3 srt_;
 	      varying vec3 pos_;
 	      varying vec3 normal_;
 	      uniform sampler2D sampler;
-	      uniform sampler2D sky;
+	      uniform samplerCube cube_sampler;
 	      uniform vec3 light_dir;
+				uniform vec3 camera;
 	      void main() {
 			  gl_FragColor = texture2D(sampler, uv_);
-				gl_FragColor.xyz = texture2D(sky, vec2(.5f * (uv_reflection.x / uv_reflection.w + 1), .5f - .5f * (uv_reflection.y / uv_reflection.w))).xyz * clamp(dot(normalize(light_dir), normalize(normal_)), 0.f, 1.f);
+				vec3 v = reflect(normalize(pos_ - camera), normalize(normal_));
+				float half_width = 20.f;
+				/*
+				float k = 0;
+				if(abs(v.x) > abs(v.y))
+				{
+					if(abs(v.x) > abs(v.z))
+					{
+							k = ((v.x > 0 ? 1 : -1) * half_width - pos_.x) / v.x;
+					}
+					else
+					{
+							k = ((v.z > 0 ? 1 : -1) * half_width - pos_.z) / v.z;
+					}
+				}
+				else
+				{
+					if(abs(v.y) > abs(v.z))
+					{
+							k = ((v.y > 0 ? 1 : -1) * half_width - pos_.y) / v.y;
+					}
+					else
+					{
+							k = ((v.z > 0 ? 1 : -1) * half_width - pos_.z) / v.z;
+					}
+				}
+				v = pos_ + k * v;
+				//*/
+			  gl_FragColor.xyz = textureCube(cube_sampler, v).xyz * clamp(dot(normalize(light_dir), normalize(normal_)), 0.f, 1.f);
+				//gl_FragColor.xyz = texture2D(cube_sampler, vec2(.5f * (uv_reflection.x / uv_reflection.w + 1), .5f - .5f * (uv_reflection.y / uv_reflection.w))).xyz * ;
 				//gl_FragColor.w = gl_FragColor.w * clamp(dot(normalize(light_dir), normalize(normal_)), 0.f, 1.f);
 	      }
       );
@@ -64,20 +94,22 @@ namespace octet {
 
       // set up handles to access the uniforms.
       modelToProjectionIndex_ = glGetUniformLocation(program(), "modelToProjection");
-      samplerIndex_ = glGetUniformLocation(program(), "sampler");
-      sky_sampler = glGetUniformLocation(program(), "sky");
+			camera_ = glGetUniformLocation(program(), "camera");
+      sampler_ = glGetUniformLocation(program(), "sampler");
+      cube_sampler_ = glGetUniformLocation(program(), "cube_sampler");
       light_dir_ = glGetUniformLocation(program(), "light_dir");
     }
 
     // start drawing with this shader
-    void render(const mat4t &modelToProjection, GLuint sampler) {
+    void render(const mat4t &modelToProjection, const vec3 &camera) {
       // start using the program
       shader::render();
 
       // set the uniforms.
-      glUniform1i(samplerIndex_, sampler);
-      glUniform1i(sky_sampler, 1);
+      glUniform1i(sampler_, 0);
+      glUniform1i(cube_sampler_, 1);
       glUniform3f(light_dir_, 0, 1, 0);
+      glUniform3fv(camera_, 1, &camera[0]);
       glUniformMatrix4fv(modelToProjectionIndex_, 1, GL_FALSE, modelToProjection.get());
 
       // now we are ready to define the attributes and draw the triangles.

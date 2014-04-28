@@ -65,6 +65,7 @@
     <ClInclude Include="..\..\src\resources\xml_writer.h" />
     <ClInclude Include="..\..\src\shaders\bump_shader.h" />
     <ClInclude Include="..\..\src\shaders\color_shader.h" />
+    <ClInclude Include="..\..\src\shaders\cubemap_shader.h" />
     <ClInclude Include="..\..\src\shaders\phong_shader.h" />
     <ClInclude Include="..\..\src\shaders\shader.h" />
     <ClInclude Include="..\..\src\shaders\texture_normal_shader.h" />

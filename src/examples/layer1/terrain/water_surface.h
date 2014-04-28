@@ -11,6 +11,7 @@ namespace octet {
 		water_shader water_shader_;
 		vertex_color_shader vertex_color_shader_;
 		mat4t modelToWorld;
+		vec3 position;
 		dynarray<vec3> vertices;
 		dynarray<vec2> uvs;
 		dynarray<vec3> normals;
@@ -27,6 +28,7 @@ namespace octet {
 		dynarray<float> wave_speeds; // S
 		dynarray<float> ps; // phase-constant = S * 2 * PI / L
 
+		sky_box &sb;
 		GLuint texture;
 		GLuint vao;
 		GLuint vbo;
@@ -36,25 +38,25 @@ namespace octet {
 		GLuint scene_texture;
 		GLuint depth_render_buffer;
 		GLuint ibo;
-		int width;
+		float width;
 		float t;
-		float span;
+		int resolution;
 		float last_update_time;
 		bool draw_normal;
 	public:
 
-		water_surface() :
+		water_surface(sky_box &s) :
 			t(0),
-			span(.1f),
+			resolution(100),
 			last_update_time(0),
-			draw_normal(false)
+			draw_normal(false),
+			sb(s)
 		{
 		}
 
 		void set_position(const vec3 &pos)
 		{
-			modelToWorld.loadIdentity();
-			modelToWorld.translate(pos[0], pos[1], pos[2]);
+			position = pos;
 		}
 
 		void toggle_draw_normal()
@@ -64,13 +66,12 @@ namespace octet {
 
 		void generate_water_surface()
 		{
-			width = 100;
-			int count = width * width;
+			int count = resolution * resolution;
 
 			vertices.resize(count);
 			uvs.resize(count);
 			normals.resize(count);
-			indices.resize((width - 1) * (width - 1) * 4);
+			indices.resize((resolution - 1) * (resolution - 1) * 4);
 			normal_vertices.resize(count * 2);
 			normal_colors.resize(count * 2);
 			for(unsigned int i = 0; i < normal_colors.size(); i++)
@@ -78,13 +79,13 @@ namespace octet {
 				normal_colors[i] = vec3(1, 0, 0);
 			}
 
-			float du = 1.f / (width - 1), v = 0, dv = du;
+			float du = 1.f / (resolution - 1), v = 0, dv = du;
 
 			int index = 0;
-			for(int i = 0; i < width; i++)
+			for(int i = 0; i < resolution; i++)
 			{
 				float u = 0;
-				for(int j = 0; j < width; j++)
+				for(int j = 0; j < resolution; j++)
 				{
 					uvs[index++] = vec2(u, v);
 					u += du;
@@ -93,32 +94,33 @@ namespace octet {
 			}
 			index = 0;
 			int index1 = 0;
-			for(int i = 0; i < width - 1; i++)
+			for(int i = 0; i < resolution - 1; i++)
 			{
-				for(int j = 0; j < width - 1; j++)
+				for(int j = 0; j < resolution - 1; j++)
 				{
 					indices[index++] = index1 + j;
-					indices[index++] = index1 + width + j;
-					indices[index++] = index1 + width + j + 1;
+					indices[index++] = index1 + resolution + j;
+					indices[index++] = index1 + resolution + j + 1;
 					indices[index++] = index1 + j + 1;
 				}
-				index1 += width;
+				index1 += resolution;
 			}
 		}
 
 		void update_wave(float t)
 		{
 			int index = 0;
-			float half_length = (width - 1) * span / 2;
-			float z = -half_length;
-			for(int i = 0; i < width; i++)
+			float half_width = width * .5f;
+			float z = -half_width;
+			float span = width / resolution;
+			for(int i = 0; i < resolution; i++)
 			{
-				float x = -half_length;
-				for(int j = 0; j < width; j++)
+				float x = -half_width;
+				for(int j = 0; j < resolution; j++)
 				{
 					//vertices[index][1] = sin(t * 1.f + j * .1f);
 					vec3 &v = vertices[index++];
-					float sum_x = 0, sum_y = 0, sum_z = 0;
+					float sum_x = position[0], sum_y = position[1], sum_z = position[2];
 					for(unsigned int k = 0; k < directions.size(); k++)
 					{
 						float value = ws[k] * dot(directions[k], vec2(x, z)) + ps[k] * t;
@@ -127,18 +129,25 @@ namespace octet {
 						sum_z += QAs[k] * directions[k][1] * cos_value;
 						sum_y += Amplitudes[k] * sin(value);
 					}
+					//*
 					v[0] = x + sum_x;
 					v[2] = z + sum_z;
 					v[1] = sum_y;
+					//*/
+					/*
+					v[0] = x;
+					v[2] = z + 5.f;
+					v[1] = position[1];
+					//*/
 					x += span;
 				}
 				z += span;
 			}
 			index = 0;
 			vec3 sum;
-			for(int i = 0; i < width; i++)
+			for(int i = 0; i < resolution; i++)
 			{
-				for(int j = 0; j < width; j++)
+				for(int j = 0; j < resolution; j++)
 				{
 					sum[0] = 0;
 					sum[1] = 0;
@@ -149,25 +158,25 @@ namespace octet {
 						if(j > 0)
 						{
 							k++;
-							sum += get_normal(vertices[index - width], vertices[index], vertices[index - 1]);
+							sum += get_normal(vertices[index - resolution], vertices[index], vertices[index - 1]);
 						}
-						if(j < width - 1)
+						if(j < resolution - 1)
 						{
 							k++;
-							sum += get_normal(vertices[index + 1], vertices[index], vertices[index - width]);
+							sum += get_normal(vertices[index + 1], vertices[index], vertices[index - resolution]);
 						}
 					}
-					if(i < width - 1)
+					if(i < resolution - 1)
 					{
 						if(j > 0)
 						{
 							k++;
-							sum += get_normal(vertices[index - 1], vertices[index], vertices[index + width]);
+							sum += get_normal(vertices[index - 1], vertices[index], vertices[index + resolution]);
 						}
-						if(j < width - 1)
+						if(j < resolution - 1)
 						{
 							k++;
-							sum += get_normal(vertices[index + width], vertices[index], vertices[index + 1]);
+							sum += get_normal(vertices[index + resolution], vertices[index], vertices[index + 1]);
 						}
 					}
 					normals[index] = normalize(sum / (float)k);
@@ -229,8 +238,9 @@ namespace octet {
 			}
 		}
 
-		void init(const vec3 &v, GLuint scene_texture)
+		void init(const vec3 &v, float width, GLuint scene_texture)
 		{
+			this->width = width;
 			this->scene_texture = scene_texture;
 			set_position(v);
 			wave_parameters_init();
@@ -259,7 +269,7 @@ namespace octet {
 
 			glGenBuffers(1, &vbo);
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			int count = width * width;
+			int count = resolution * resolution;
 			int pos_array_size = count * sizeof(vec3);
 			int uv_array_size = count * sizeof(vec2);
 			int normal_array_size = count * sizeof(vec3);
@@ -281,14 +291,14 @@ namespace octet {
 			glBindVertexArray(0);
 		}
 
-		void render(const mat4t &worldToProjection, int sampler)
+		void render(const mat4t &worldToProjection, const vec3 &camera)
 		{
-			mat4t m = modelToWorld * worldToProjection;
-			water_shader_.render(m, sampler);
+			mat4t m = worldToProjection;
+			water_shader_.render(m, camera);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texture);
 			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, scene_texture);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, sb.get_texture());
 			glBindVertexArray(vao);
 			glDrawElements(GL_QUADS, indices.size(), GL_UNSIGNED_INT, 0);
 			if(draw_normal)

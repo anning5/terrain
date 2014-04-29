@@ -399,63 +399,71 @@ namespace octet {
 				printf("\n Wave Type: %d : Diagonal Beach waves", waveType);
 
 #pragma region Diagonal Beach Waves
-				waveLength = 1;
-				amplitude = 2;
-				steepness = 1;
-				speedMultipler = 0.2f;
-				
-				directions[0] = (normalize(vec2(0, 1)));
-				Qs[0] = (0.5f) ;
-				Amplitudes[0] = (.05f);
-				wave_lengths[0] = (5);
-				wave_speeds[0] = (2);
-				
-				directions[1] = (normalize(vec2(-1, 1)));
-				Qs[1] = (0.5f);
-				Amplitudes[1] = (.05f);
-				wave_lengths[1] = (2);
-				wave_speeds[1] = (2);
-				
-				directions[2] = (normalize(vec2(1, 0)));
-				Qs[2] = (0.5f);
-				Amplitudes[2] =(.05f);
-				wave_lengths[2] = (2);
-				wave_speeds[2] = (2);
-				
-				directions[3] = (normalize(vec2(-1, 0)));
-				Qs[3] = (0.5f);
-				Amplitudes[3] = (.20f);
-				wave_lengths[3] = (1);
-				wave_speeds[3] = (2);
-
-
+				//waveLength = 1;
+				//amplitude = 2;
+				//steepness = 1;
+				//speedMultipler = 0.2f;
+				//
 				//directions[0] = (normalize(vec2(0, 1)));
-				//Qs[0] = lerp(t, Qs[0],(0.5f)) ;
-				//Amplitudes[0] = lerp(t,Amplitudes[0], (.05f));
-				//wave_lengths[0] = lerp(t,wave_lengths[0],(5));
-				//wave_speeds[0] = lerp(t,wave_speeds[0], (2));
+				//Qs[0] = (0.5f) ;
+				//Amplitudes[0] = (.05f);
+				//wave_lengths[0] = (5);
+				//wave_speeds[0] = (2);
 				//
 				//directions[1] = (normalize(vec2(-1, 1)));
-				//Qs[1] = lerp(t, Qs[1],(0.5f)) ;
-				//Amplitudes[1] = lerp(t,Amplitudes[1], (.05f));
-				//wave_lengths[1] = lerp(t,wave_lengths[1],(2));
-				//wave_speeds[1] = lerp(t,wave_speeds[1], (2));
+				//Qs[1] = (0.5f);
+				//Amplitudes[1] = (.05f);
+				//wave_lengths[1] = (2);
+				//wave_speeds[1] = (2);
 				//
 				//directions[2] = (normalize(vec2(1, 0)));
-				//Qs[2] = lerp(t, Qs[2],(0.5f)) ;
-				//Amplitudes[2] = lerp(t,Amplitudes[2], (.05f));
-				//wave_lengths[2] = lerp(t,wave_lengths[2],(2));
-				//wave_speeds[2] = lerp(t,wave_speeds[2], (2));
+				//Qs[2] = (0.5f);
+				//Amplitudes[2] =(.05f);
+				//wave_lengths[2] = (2);
+				//wave_speeds[2] = (2);
 				//
-				//directions[3] = (normalize(vec2(0, 1)));
-				//Qs[3] = lerp(t, Qs[3],(0.5f)) ;
-				//Amplitudes[3] = lerp(t,Amplitudes[3], (.20f));
-				//wave_lengths[3] = lerp(t,wave_lengths[3],(1));
-				//wave_speeds[3] = lerp(t,wave_speeds[3], (2));
+				//directions[3] = (normalize(vec2(-1, 0)));
+				//Qs[3] = (0.5f);
+				//Amplitudes[3] = (.20f);
+				//wave_lengths[3] = (1);
+				//wave_speeds[3] = (2);
+
+				float i = 0.0f;
+				float transitionTime = 10.0f;
+				float rate = 1.0/transitionTime;
+
+				while(i < 1.0f)
+				{
+					i+= t * rate;
+				directions[0] = (normalize(vec2(0, 1)));
+				Qs[0] = lerp(i, Qs[0],(0.5f)) ;
+				Amplitudes[0] = lerp(i,Amplitudes[0], (.05f));
+				wave_lengths[0] = lerp(i,wave_lengths[0],(5));
+				wave_speeds[0] = lerp(i,wave_speeds[0], (2));
+
+				directions[1] = (normalize(vec2(-1, 1)));
+				Qs[1] = lerp(i, Qs[1],(0.5f)) ;
+				Amplitudes[1] = lerp(i,Amplitudes[1], (.05f));
+				wave_lengths[1] = lerp(i,wave_lengths[1],(2));
+				wave_speeds[1] = lerp(i,wave_speeds[1], (2));
+
+				directions[2] = (normalize(vec2(1, 0)));
+				Qs[2] = lerp(i, Qs[2],(0.5f)) ;
+				Amplitudes[2] = lerp(i,Amplitudes[2], (.05f));
+				wave_lengths[2] = lerp(i,wave_lengths[2],(2));
+				wave_speeds[2] = lerp(i,wave_speeds[2], (2));
+
+				directions[3] = (normalize(vec2(0, 1)));
+				Qs[3] = lerp(i, Qs[3],(0.5f)) ;
+				Amplitudes[3] = lerp(i,Amplitudes[3], (.20f));
+				wave_lengths[3] = lerp(i,wave_lengths[3],(1));
+				wave_speeds[3] = lerp(i,wave_speeds[3], (2));
 
 
 #pragma endregion
 					recalculate();
+
+				}
 			}
 			if(waveType == 3){
 				printf("\n Wave Type: %d : Horizontal Rolling Waves", waveType);

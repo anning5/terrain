@@ -615,6 +615,65 @@ namespace octet {
 					reset_terrain();
 				}
 			}
+
+			//Wave Speed
+			if(is_key_down('O'))
+			{
+				water.setWaveSpeed(1);
+			} else if(is_key_down('L'))
+			{
+				water.setWaveSpeed(0);
+			}
+
+			//Wave Length
+			if(is_key_down('I'))
+			{
+				water.setWaveLength(1);
+			} else if(is_key_down('K'))
+			{
+				water.setWaveLength(0);
+			}
+
+			//Wave Amplitude
+			if(is_key_down('U'))
+			{
+				water.setWaveAmplitude(1);
+			} else if(is_key_down('J'))
+			{
+				water.setWaveAmplitude(0);
+			}
+
+			if(tick_count - key_cool_down > 200)
+			{
+				//Wave Steepness
+				if(is_key_down('Y'))
+				{
+					key_cool_down = tick_count;
+					water.setWaveSteepness(1);
+				} else if(is_key_down('H'))
+				{
+					key_cool_down = tick_count;
+					water.setWaveSteepness(0);
+				} 
+
+				//Wave Type
+				if(is_key_down('M'))
+				{
+					key_cool_down = tick_count;
+					water.waves(0);
+				} else if(is_key_down('N'))
+				{
+					key_cool_down = tick_count;
+					water.waves(1);
+				}
+
+				//Debug
+				if(is_key_down('0'))
+				{
+					key_cool_down = tick_count;
+					water.debugParamter();
+				}
+			}
 		}
 
 		void draw_terrain(const mat4t &m)

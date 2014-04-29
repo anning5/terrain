@@ -28,6 +28,13 @@ namespace octet {
 		dynarray<float> wave_speeds; // S
 		dynarray<float> ps; // phase-constant = S * 2 * PI / L
 
+		int waveType;
+		int numWaves;
+		float speedMultipler;
+		float waveLength;
+		float amplitude;
+		int steepness;
+
 		sky_box &sb;
 		GLuint texture;
 		GLuint vao;
@@ -123,11 +130,11 @@ namespace octet {
 					float sum_x = position[0], sum_y = position[1], sum_z = position[2];
 					for(unsigned int k = 0; k < directions.size(); k++)
 					{
-						float value = ws[k] * dot(directions[k], vec2(x, z)) + ps[k] * t;
+						float value = (ws[k] + waveLength) * dot(directions[k], vec2(x, z)) + (ps[k] * t) * speedMultipler;
 						float cos_value = cos(value);
 						sum_x += QAs[k] * directions[k][0] * cos_value;
 						sum_z += QAs[k] * directions[k][1] * cos_value;
-						sum_y += Amplitudes[k] * sin(value);
+						sum_y += amplitude * Amplitudes[k] * pow(((sin(value) / 2)),steepness);
 					}
 					//*
 					v[0] = x + sum_x;
@@ -206,35 +213,57 @@ namespace octet {
 
 		void wave_parameters_init()
 		{
-			directions.push_back(normalize(vec2(0, 1.f)));
-			Qs.push_back(.8f);
-			Amplitudes.push_back(.02f);
+			waveType = 0;
+			numWaves = 4;
+			speedMultipler = 1;
+			waveLength = 1;
+			amplitude = 2;
+			steepness = 1;
+
+			directions.push_back(normalize(vec2(0, 1)));
+			Qs.push_back(0.5f) ;
+			Amplitudes.push_back(.05f);
+			wave_lengths.push_back(5);
+			wave_speeds.push_back(2);
+
+			directions.push_back(normalize(vec2(1, 0)));
+			Qs.push_back(0.5f);
+			Amplitudes.push_back(.05f);
 			wave_lengths.push_back(2);
 			wave_speeds.push_back(2);
 
-			directions.push_back(normalize(vec2(1.f, 0)));
-			Qs.push_back(.8f);
-			Amplitudes.push_back(.02f);
+			directions.push_back(normalize(vec2(1, 1)));
+			Qs.push_back(0.5f);
+			Amplitudes.push_back(.05f);
 			wave_lengths.push_back(2);
 			wave_speeds.push_back(2);
 
-			directions.push_back(normalize(vec2(1.f, 1.f)));
-			Qs.push_back(.8f);
-			Amplitudes.push_back(.02f);
+			directions.push_back(normalize(vec2(-1, 1)));
+			Qs.push_back(0.5f);
+			Amplitudes.push_back(.05f);
 			wave_lengths.push_back(2);
 			wave_speeds.push_back(2);
 
-			directions.push_back(normalize(vec2(-1.f, 1.f)));
-			Qs.push_back(.8f);
-			Amplitudes.push_back(.02f);
-			wave_lengths.push_back(2);
-			wave_speeds.push_back(2);
-
-			for(unsigned int i = 0; i < Amplitudes.size(); i++)
+			for(unsigned int i = 0; i < numWaves; i++)
 			{
-				QAs.push_back(Amplitudes[i] * Qs[i]);
-				ws.push_back(2 * 3.14159265f / wave_lengths[i]);
+				ws.push_back(2 * 3.14159265f / wave_lengths[i] );
 				ps.push_back(wave_speeds[i] * ws[i]);
+				//Qs.push_back(steepness/(ws[i] * Amplitudes[i] * numWaves));
+				QAs.push_back(Amplitudes[i] * Qs[i]);				
+			}
+		}
+
+		float lerp(float time, float value_A, float value_B){
+			return (1-time) * value_A + time * value_B;
+		}
+
+		void recalculate(){
+			for(unsigned int i = 0; i < numWaves; i++)
+			{
+				ws[i] = (2 * 3.14159265f / wave_lengths[i] );
+				ps[i] = (wave_speeds[i] * ws[i]);
+				Qs[i] = (steepness/(ws[i] * Amplitudes[i] * numWaves));
+				QAs[i] = (Amplitudes[i] * Qs[i]);				
 			}
 		}
 
@@ -308,6 +337,239 @@ namespace octet {
 				glDrawArrays(GL_LINES, 0, normal_vertices.size());
 			}
 			glBindVertexArray(0);
+		}
+
+		//Setters: Speed / Wave Length / Amplitude / Steepness
+		void setWaveSpeed(int speed)
+		{
+			if(speed == 1){
+				speedMultipler += 0.01;
+				printf("\n Current Speed: %f", speedMultipler);
+			} else if (speed == 0){
+				speedMultipler -= 0.01;
+				printf("\n Current Speed: %f", speedMultipler);
+			}
+		}
+
+		void setWaveLength(int _waveLength)
+		{
+			if(_waveLength == 1){
+				waveLength += 0.01;
+				printf("\n Current WaveLength: %f", waveLength);
+			} else if (_waveLength == 0){
+				waveLength -= 0.01;
+				printf("\n Current WaveLength: %f", waveLength);
+			}
+		}
+
+		void setWaveAmplitude(int _amplitude)
+		{
+			if(_amplitude == 1){
+				amplitude += 0.1f;
+				printf("\n Current Amplitude: %f", amplitude);
+			} else if (_amplitude == 0){
+				amplitude -= 0.1f;
+				printf("\n Current Amplitude: %f", amplitude);
+			}
+		}
+
+		void setWaveSteepness(int _steepness)
+		{
+			if(_steepness == 1 && steepness < 4){
+				steepness += 1;
+				printf("\n Current Steepness: %d", steepness);
+			} else if (_steepness == 0 && steepness > 0){
+				steepness -= 1;
+				printf("\n Current Steepness: %d", steepness);
+			}
+		}
+
+		void waves(int type){
+			if(type == 1){
+				waveType += 1;
+			} else if (type == 0){
+				waveType -= 1;
+			}
+
+			if(waveType >= 4){ waveType = 4;}
+			if(waveType < 0){ waveType = 1;}
+
+
+			if(waveType == 4){
+				printf("\n Wave Type: %d : Diagonal Beach waves", waveType);
+
+#pragma region Diagonal Beach Waves
+				waveLength = 1;
+				amplitude = 2;
+				steepness = 1;
+				speedMultipler = 0.2f;
+				
+				directions[0] = (normalize(vec2(0, 1)));
+				Qs[0] = (0.5f) ;
+				Amplitudes[0] = (.05f);
+				wave_lengths[0] = (5);
+				wave_speeds[0] = (2);
+				
+				directions[1] = (normalize(vec2(-1, 1)));
+				Qs[1] = (0.5f);
+				Amplitudes[1] = (.05f);
+				wave_lengths[1] = (2);
+				wave_speeds[1] = (2);
+				
+				directions[2] = (normalize(vec2(1, 0)));
+				Qs[2] = (0.5f);
+				Amplitudes[2] =(.05f);
+				wave_lengths[2] = (2);
+				wave_speeds[2] = (2);
+				
+				directions[3] = (normalize(vec2(-1, 0)));
+				Qs[3] = (0.5f);
+				Amplitudes[3] = (.20f);
+				wave_lengths[3] = (1);
+				wave_speeds[3] = (2);
+
+
+				//directions[0] = (normalize(vec2(0, 1)));
+				//Qs[0] = lerp(t, Qs[0],(0.5f)) ;
+				//Amplitudes[0] = lerp(t,Amplitudes[0], (.05f));
+				//wave_lengths[0] = lerp(t,wave_lengths[0],(5));
+				//wave_speeds[0] = lerp(t,wave_speeds[0], (2));
+				//
+				//directions[1] = (normalize(vec2(-1, 1)));
+				//Qs[1] = lerp(t, Qs[1],(0.5f)) ;
+				//Amplitudes[1] = lerp(t,Amplitudes[1], (.05f));
+				//wave_lengths[1] = lerp(t,wave_lengths[1],(2));
+				//wave_speeds[1] = lerp(t,wave_speeds[1], (2));
+				//
+				//directions[2] = (normalize(vec2(1, 0)));
+				//Qs[2] = lerp(t, Qs[2],(0.5f)) ;
+				//Amplitudes[2] = lerp(t,Amplitudes[2], (.05f));
+				//wave_lengths[2] = lerp(t,wave_lengths[2],(2));
+				//wave_speeds[2] = lerp(t,wave_speeds[2], (2));
+				//
+				//directions[3] = (normalize(vec2(0, 1)));
+				//Qs[3] = lerp(t, Qs[3],(0.5f)) ;
+				//Amplitudes[3] = lerp(t,Amplitudes[3], (.20f));
+				//wave_lengths[3] = lerp(t,wave_lengths[3],(1));
+				//wave_speeds[3] = lerp(t,wave_speeds[3], (2));
+
+
+#pragma endregion
+					recalculate();
+			}
+			if(waveType == 3){
+				printf("\n Wave Type: %d : Horizontal Rolling Waves", waveType);
+
+#pragma region Horizontal Rolling Waves
+				waveLength = 1;
+				amplitude = 2;
+				steepness = 1;
+				speedMultipler = 0.2f;
+
+				directions[0] = (normalize(vec2(0, 1)));
+				Qs[0] = (0.5f) ;
+				Amplitudes[0] = (.05f);
+				wave_lengths[0] = (5);
+				wave_speeds[0] = (2);
+
+				directions[1] = (normalize(vec2(1, 0)));
+				Qs[1] = (0.5f);
+				Amplitudes[1] = (.05f);
+				wave_lengths[1] = (2);
+				wave_speeds[1] = (2);
+
+				directions[2] = (normalize(vec2(1, 1)));
+				Qs[2] = (0.5f);
+				Amplitudes[2] =(.05f);
+				wave_lengths[2] = (2);
+				wave_speeds[2] = (2);
+
+				directions[3] = (normalize(vec2(-1, 0)));
+				Qs[3] = (0.5f);
+				Amplitudes[3] = (.05f);
+				wave_lengths[3] = (1);
+				wave_speeds[3] = (2);
+#pragma endregion
+				recalculate();
+			}
+			if(waveType == 2){
+				printf("\n Wave Type: %d : Ocean Wave", waveType);
+
+#pragma region Ocean Wave
+				speedMultipler = 0.4f;
+				waveLength = -0.72f;
+				amplitude = 2.69f;
+				steepness = 3;
+
+				directions[0] = (normalize(vec2(0, 1)));
+				directions[1] = (normalize(vec2(1, 0)));
+				directions[2] = (normalize(vec2(1, 1)));
+				directions[3] = (normalize(vec2(-1, 1)));
+
+				Qs[0] = 0.5f;
+				Qs[1] = 0.5f;
+				Qs[2] = 0.5f;
+				Qs[3] = 0.5f;
+
+				Amplitudes[0] = 0.5f;
+				Amplitudes[1] = 0.5f;
+				Amplitudes[2] = 0.5f;
+				Amplitudes[3] = 0.5f;
+
+				wave_lengths[0] = 2;
+				wave_lengths[1] = 2;
+				wave_lengths[2] = 2;
+				wave_lengths[3] = 2;
+
+				wave_speeds[0] = 2;
+				wave_speeds[1] = 2;
+				wave_speeds[2] = 2;
+				wave_speeds[3] = 2;
+
+
+#pragma endregion
+				recalculate();
+			}
+			if(waveType == 1){
+				printf("\n Wave Type: %d : Rain Drop", waveType);
+
+#pragma region Rain Drop
+				speedMultipler = -0.85f;
+				waveLength = -7.62f;
+				amplitude = -4.09f;
+				steepness = 1;
+
+				directions[0] = (normalize(vec2(0, 1)));
+				Qs[0] = (0.5f) ;
+				Amplitudes[0] = (.05f);
+				wave_lengths[0] = (2);
+				wave_speeds[0] = (2);
+
+				directions[1] = (normalize(vec2(1, 0)));
+				Qs[1] = (0.5f);
+				Amplitudes[1] = (.05f);
+				wave_lengths[1] = (2);
+				wave_speeds[1] = (2);
+
+				directions[2] = (normalize(vec2(1, 1)));
+				Qs[2] = (0.5f);
+				Amplitudes[2] = (.05f);
+				wave_lengths[2] = (2);
+				wave_speeds[2] = (2);
+
+				directions[3] = (normalize(vec2(-1, 1)));
+				Qs[3] = (0.5f);
+				Amplitudes[3] = (.05f);
+				wave_lengths[3] = (2);
+				wave_speeds[3] = (2);
+
+#pragma endregion
+				recalculate();
+			}
+		}
+
+		void debugParamter(){
+			printf("\n WaveType: %d, WaveLenght: %f, Amplitude: %f, Steepness: %d, Speed: %f", waveType, waveLength, amplitude, steepness, speedMultipler);
 		}
 	};
 }

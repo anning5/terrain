@@ -244,7 +244,7 @@ namespace octet {
 			wave_lengths.push_back(2);
 			wave_speeds.push_back(2);
 
-			for(unsigned int i = 0; i < numWaves; i++)
+			for(int i = 0; i < numWaves; i++)
 			{
 				ws.push_back(2 * 3.14159265f / wave_lengths[i] );
 				ps.push_back(wave_speeds[i] * ws[i]);
@@ -258,7 +258,7 @@ namespace octet {
 		}
 
 		void recalculate(){
-			for(unsigned int i = 0; i < numWaves; i++)
+			for(int i = 0; i < numWaves; i++)
 			{
 				ws[i] = (2 * 3.14159265f / wave_lengths[i] );
 				ps[i] = (wave_speeds[i] * ws[i]);
@@ -343,10 +343,10 @@ namespace octet {
 		void setWaveSpeed(int speed)
 		{
 			if(speed == 1){
-				speedMultipler += 0.01;
+				speedMultipler += 0.01f;
 				printf("\n Current Speed: %f", speedMultipler);
 			} else if (speed == 0){
-				speedMultipler -= 0.01;
+				speedMultipler -= 0.01f;
 				printf("\n Current Speed: %f", speedMultipler);
 			}
 		}
@@ -354,10 +354,10 @@ namespace octet {
 		void setWaveLength(int _waveLength)
 		{
 			if(_waveLength == 1){
-				waveLength += 0.01;
+				waveLength += 0.01f;
 				printf("\n Current WaveLength: %f", waveLength);
 			} else if (_waveLength == 0){
-				waveLength -= 0.01;
+				waveLength -= 0.01f;
 				printf("\n Current WaveLength: %f", waveLength);
 			}
 		}
@@ -430,7 +430,7 @@ namespace octet {
 
 				float i = 0.0f;
 				float transitionTime = 10.0f;
-				float rate = 1.0/transitionTime;
+				float rate = 1.0f/transitionTime;
 
 				while(i < 1.0f)
 				{

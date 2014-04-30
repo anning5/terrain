@@ -72,7 +72,7 @@ namespace octet {
     bool reallocate_vertices;
     bool reallocate_ctrl_points;
     bool draw_normal;
-		static const int TERRAIN_WIDTH = 20;
+		static const int TERRAIN_WIDTH = 100;
 
   public:
 
@@ -94,7 +94,7 @@ namespace octet {
 			reallocate_vertices(true),
 			reallocate_ctrl_points(true),
 			draw_normal(false),
-			water_height(-.2f),
+			water_height(-2.f),
 			sb(sky_box::get_sky_box()),
 			water(sb)
 	  {
@@ -103,8 +103,7 @@ namespace octet {
 		  cc.rotate_v(-ANGLE_V);
 			float span = (float)TERRAIN_WIDTH / ctrl_point_count;
 			float offset = (TERRAIN_WIDTH - span) * .5f;
-			vec3 pos(offset, water_height, offset);
-		  cc.set_view_position(pos);
+			cc.set_view_position(vec3(offset, 0, offset));
 		  //cc.set_view_position(vec3(0, 0, 0));
 		  mouse_wheel = get_mouse_wheel();
 	  }
@@ -271,7 +270,7 @@ namespace octet {
 			vec3 camera((vec3&)(cc.get_matrix()[3]));
 			vec3 ray((view_to_world(target) - camera).normalize());
 
-			static float radius = .1f;
+			static float radius = .5f;
 
 			const dynarray<vec3> &points = terrain.get_ctrl_points();
 			float x0 = camera[0], y0 = camera[1], z0 = camera[2], x1 = ray[0], y1 = ray[1], z1 = ray[2];
